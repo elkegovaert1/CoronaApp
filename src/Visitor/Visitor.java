@@ -11,7 +11,7 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
     private String name;
     private String userNumber;
     private RegistrarInterface registrar;
-    private List<String> tokens; // if token is used or nog
+    private List<String> tokens; // if token is used or not
     private List<String> log;
 
     public Visitor(String username, String userNumber, RegistrarInterface registrar) throws RemoteException {
