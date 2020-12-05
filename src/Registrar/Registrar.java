@@ -9,12 +9,7 @@ import javafx.collections.ObservableList;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 /*
@@ -35,6 +30,7 @@ and the tokens that were issued
  */
 
 public class Registrar extends UnicastRemoteObject implements RegistrarInterface {
+    private static final int MAX_VISITS_ALLOWED = 3; // moet 48 zijn
 
     private List<VisitorInterface> visitors;
     private List <CatheringInterface> catherings;
@@ -50,6 +46,8 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
         catherings = new ArrayList<>();
         visitorNameNumber = FXCollections.observableArrayList();
         catheringNameNumber = FXCollections.observableArrayList();
+        dateGeneratedTokens = new HashMap<>();
+        userTokens = new HashMap<>();
     }
 
     @Override
@@ -108,18 +106,21 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     public List<String> getTokens(String number) throws RemoteException {
         LocalDate today = LocalDate.now();
 
-        LocalDate lastUpdate = dateGeneratedTokens.get(number);
-
-        if (today.isBefore(lastUpdate) || today.isEqual(lastUpdate)) {
-            return null;
-        } else {
-            dateGeneratedTokens.replace(number, today);
-            List<String> newTokens = new ArrayList<>();
-            newTokens.add("1");
-            newTokens.add("2");
-            newTokens.add("3");
-            return newTokens;
+        LocalDate lastUpdate;
+        if (dateGeneratedTokens.containsKey(number)) {
+            lastUpdate = dateGeneratedTokens.get(number);
+            if (today.isBefore(lastUpdate) || today.isEqual(lastUpdate)) {
+                return null;
+            }
         }
+
+        dateGeneratedTokens.replace(number, today);
+        List<String> newTokens = new ArrayList<>();
+        Random random = new Random();
+        for (int i = 0; i < MAX_VISITS_ALLOWED; i++) {
+            newTokens.add(String.valueOf(random.nextInt(10000000)));
+        }
+        return newTokens;
     }
 
     @Override

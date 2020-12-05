@@ -1,5 +1,6 @@
 package Visitor;
 
+import MixingProxy.MixingProxyInterface;
 import Registrar.RegistrarInterface;
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -17,6 +18,7 @@ import java.rmi.registry.Registry;
 
 public class VisitorScreen extends Application {
     public RegistrarInterface registrar;
+    public MixingProxyInterface mixingProxy;
     public Visitor visitor;
 
     public static void main(String[] args) throws RemoteException {
@@ -49,8 +51,10 @@ public class VisitorScreen extends Application {
         submitVisitorInfoButton.setOnAction(Event -> {
             try {
 
-                Registry myRegistry = LocateRegistry.getRegistry("localhost", 1099);
-                registrar =  (RegistrarInterface) myRegistry.lookup("Registrar");
+                Registry registryRegistrar = LocateRegistry.getRegistry("localhost", 1099);
+                registrar =  (RegistrarInterface) registryRegistrar.lookup("Registrar");
+                Registry registryMixingProxy = LocateRegistry.getRegistry("localhost", 1100);
+                mixingProxy = (MixingProxyInterface) registryMixingProxy.lookup("MixingProxy");
 
                 System.out.println("[System] Visitor App is running");
 
@@ -63,7 +67,7 @@ public class VisitorScreen extends Application {
                     errorLabel.setText("Number already in use");
 
                 } else {
-                    visitor = new Visitor(username, userNumber, registrar);
+                    visitor = new Visitor(username, userNumber, registrar, mixingProxy);
 
                     boolean isConnected = registrar.newVisitor(visitor);
                     if (!isConnected) {
@@ -158,8 +162,21 @@ public class VisitorScreen extends Application {
         rootPane.setVgap(10);
 
         Label allowed = new Label ("visit allowed!");
+        Button leaveCathering = new Button("Leave cathering facility");
+
+        leaveCathering.setOnAction(Event -> {
+            visitAllowed.close();
+            try {
+                visitAllowed.setScene(makeHomeUI(visitAllowed, visitor, registrar));
+                visitAllowed.setTitle(visitor.getName());
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+            visitAllowed.show();
+        });
 
         rootPane.add(allowed, 0, 0);
+        rootPane.add(leaveCathering,0,1);
 
         return new Scene(rootPane, 600, 400);
     }

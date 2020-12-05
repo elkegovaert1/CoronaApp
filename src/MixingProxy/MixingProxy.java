@@ -31,6 +31,7 @@ import javafx.collections.ObservableList;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.List;
 
 public class MixingProxy extends UnicastRemoteObject implements MixingProxyInterface {
 
@@ -42,6 +43,11 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 
     public void addCapsule(String capsule) throws RemoteException {
         Platform.runLater(() -> capsules.add(capsule));
+    }
+
+    @Override
+    public void addCapsules(List<String> capsules) throws RemoteException {
+        Platform.runLater(() -> capsules.addAll(capsules));
     }
 
     public void flush(MatchingInterface msi) throws RemoteException{
