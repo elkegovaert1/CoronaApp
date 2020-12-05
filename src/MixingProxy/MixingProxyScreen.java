@@ -68,12 +68,9 @@ public class MixingProxyScreen extends Application {
 
         });
 
-
-
-
-
         rootPane.add(queueLabel, 0, 0);
         rootPane.add(queueView, 0, 1);
+        rootPane.add(flushCapsules, 0,2);
 
         primaryStage.show();
 

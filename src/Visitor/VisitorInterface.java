@@ -14,5 +14,4 @@ public interface VisitorInterface extends Remote {
     boolean visitCathering(String QRCode) throws RemoteException;
 
     void updateTokens() throws RemoteException;
-    void updateCapsules() throws RemoteException;
 }

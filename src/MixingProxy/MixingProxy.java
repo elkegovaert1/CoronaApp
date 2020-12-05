@@ -22,6 +22,13 @@ removed from the database of the matching service after a
 predefined time interval, which can be imposed by the government
 (with a minimum of one day to prevent multiple spending of the
 same user token)
+
+Upon receiving a capsule, the mixing server first checks (a) the
+validity of the user token, and then verifies that (b) it is a token for
+that particular day and (c) it has not been spent before
+
+This capsule contains the current time interval, a valid user token 𝑇𝑥 ,𝑑𝑎𝑦𝑖
+𝑢ser and the 3rd value in the QR code (i.e., 𝐻(𝑅𝑖, 𝑛𝑦𝑚𝐶𝐹,𝑑𝑎𝑦𝑖) ).
  */
 
 import MatchingService.MatchingInterface;
@@ -31,6 +38,7 @@ import javafx.collections.ObservableList;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.time.LocalDate;
 import java.util.List;
 
 public class MixingProxy extends UnicastRemoteObject implements MixingProxyInterface {
@@ -41,17 +49,54 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
         capsules = FXCollections.observableArrayList();
     }
 
-    public void addCapsule(String capsule) throws RemoteException {
-        Platform.runLater(() -> capsules.add(capsule));
+    @Override
+    public boolean addCapsule(String newCapsule) throws RemoteException {
+        boolean accepted = controlCapsule(newCapsule);
+
+        // voeg capsules toe
+        if (accepted) {
+            Platform.runLater(() -> capsules.add(newCapsule + LocalDate.now().toString())); // mixing proxy voegt nogmaals data toe als check
+            return true;
+        } else {
+            return false;
+        }
+
     }
 
     @Override
-    public void addCapsules(List<String> capsules) throws RemoteException {
-        Platform.runLater(() -> capsules.addAll(capsules));
+    public boolean controlCapsule(String newCapsule) throws RemoteException {
+        // controle legite capsule
+        String [] information = newCapsule.split(";");
+        String code = information[0];
+        String date = information[1];
+        String token = information[2];
+
+        // TODO: control the validity of the user token
+
+        // controle datum
+        String now = LocalDate.now().toString();
+        if (!now.equals(date)) {
+            return false;
+        }
+
+        // als het niet al bevat
+        for (String c: capsules) {
+            String [] capsuleSplit = newCapsule.split(";");
+            if (capsuleSplit[2].equals(token)) {
+                return false;
+            }
+        }
+
+
+        return true;
     }
 
+    @Override
     public void flush(MatchingInterface msi) throws RemoteException{
+        // send to matching server
 
+        // remove data
+        capsules.clear();
     }
 
 }

@@ -135,7 +135,12 @@ public class VisitorScreen extends Application {
         Label error = new Label();
 
         visitCathering.setOnAction(Event -> {
-            boolean visited = visitor.visitCathering(qrcode.getText());
+            boolean visited = false;
+            try {
+                visited = visitor.visitCathering(qrcode.getText());
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
             if (!visited) {
                 error.setText("Visit not allowed");
             } else {
