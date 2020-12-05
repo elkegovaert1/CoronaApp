@@ -6,10 +6,21 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
+import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.util.*;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+
+//import javax.xml.bind.DatatypeConverter; 
 
 
 /*
@@ -37,8 +48,10 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 
     public static ObservableList<String> visitorNameNumber;
     public static ObservableList<String> catheringNameNumber;
+    
+    private static SecretKey s;
 
-    private Map<String, List<String>> userTokens;
+    private Map<String, List<String>> userTokens; //key=phonenr || value=visitorTokens
     private Map<String, LocalDate> dateGeneratedTokens; // wanneer tokens laatste keer gegenereerd
 
     public Registrar() throws RemoteException {
@@ -48,6 +61,13 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
         catheringNameNumber = FXCollections.observableArrayList();
         dateGeneratedTokens = new HashMap<>();
         userTokens = new HashMap<>();
+        try{
+        	s = createAESKey();
+        }catch(Exception e) {
+        	e.printStackTrace();
+        }
+        //System.out.println("The Secret Key is :" + DatatypeConverter.printHexBinary( s.getEncoded())); 
+        //IK KAN DEZE PACKAGE (datatypeconverter) NIET IMPORTEREN, JIJ?
     }
 
     @Override
@@ -156,12 +176,97 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     }
 
     @Override
-    public String generateDailyQRCode(String businnessNumber) throws RemoteException {
-        // R random number
-        // CF cathering facility
-        // H(R,nym) a day-specific pseudonym 𝑛𝑦𝑚𝐶𝐹,𝑑𝑎𝑦𝑖 for the catering facility as
-        //      follows (with H being a cryptographic hash function):
-        return "R;CF;H(R,nym)";
-    }
+    public byte[] generateDailyPseudonym(String businnessNumber, String location) throws RemoteException {
+    	String plainText = businnessNumber + ";" + LocalDate.now().toString(); 
 
+    // Encrypting the message 
+    // using the symmetric key 
+    	byte[] cipherText = null;
+    	try {
+        	cipherText = do_AESEncryption(plainText, s, createInitializationVector()); 
+    	}catch(Exception e) {
+    		e.printStackTrace();
+    	}
+    	MessageDigest digest;
+    	byte[] nym = null;
+		try {
+			digest = MessageDigest.getInstance("SHA-256");
+			String strToHash = cipherText.toString() + ";" + location + ";" + LocalDate.now().toString();
+			nym = digest.digest(strToHash.getBytes(StandardCharsets.UTF_8));
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	return nym;        
+    }
+    public void newDay() {
+    	for(CatheringInterface ci : catherings) {
+    		byte[] nym = generateDailyPseudonym(ci.getBusinnessNumber(), ci.getLocation());
+    		ci.receivePseudonym(nym);
+    	}
+    	for(VisitorInterface vi : visitors) {
+    		for(int i=0;i<48;i++) {
+    			String token = "generateToken";
+        		vi.receiveToken(token);
+        		userTokens.get(vi.getNumber()).add(token);
+    		}    		    		
+    	}
+    }
+ // Function to create a secret key 
+    public static SecretKey createAESKey() throws Exception { 
+  
+        // Creating a new instance of 
+        // SecureRandom class. 
+        SecureRandom securerandom = new SecureRandom(); 
+  
+        // Passing the string to 
+        // KeyGenerator 
+        KeyGenerator keygenerator = KeyGenerator.getInstance("AES"); 
+  
+        // Initializing the KeyGenerator 
+        // with 256 bits. 
+        keygenerator.init(256, securerandom); 
+        SecretKey key = keygenerator.generateKey(); 
+        return key; 
+    } 
+ // Function to initialize a vector 
+    // with an arbitrary value 
+    public static byte[] createInitializationVector() {   
+        // Used with encryption 
+        byte[] initializationVector = new byte[16]; 
+        SecureRandom secureRandom = new SecureRandom(); 
+        secureRandom.nextBytes(initializationVector); 
+        return initializationVector; 
+    }
+ // This function takes plaintext, 
+    // the key with an initialization 
+    // vector to convert plainText 
+    // into CipherText. 
+    public static byte[] do_AESEncryption(String plainText, SecretKey secretKey, 
+    		byte[] initializationVector) throws Exception { 
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING"); 
+  
+        IvParameterSpec ivParameterSpec = new IvParameterSpec(initializationVector); 
+  
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivParameterSpec); 
+  
+        return cipher.doFinal(plainText.getBytes()); 
+    } 
+ // This function performs the 
+    // reverse operation of the 
+    // do_AESEncryption function. 
+    // It converts ciphertext to 
+    // the plaintext using the key. 
+    public static String do_AESDecryption(byte[] cipherText, SecretKey secretKey, 
+    		byte[] initializationVector) throws Exception {
+    	Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING"); 
+  
+        IvParameterSpec ivParameterSpec = new IvParameterSpec(initializationVector); 
+  
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, ivParameterSpec); 
+  
+        byte[] result = cipher.doFinal(cipherText); 
+  
+        return new String(result); 
+    }
 }

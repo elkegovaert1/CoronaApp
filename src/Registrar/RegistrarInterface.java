@@ -21,7 +21,7 @@ public interface RegistrarInterface extends Remote {
     boolean checkUserInformation(String number) throws RemoteException;
     boolean checkCatheringInformation(String businessNumber) throws RemoteException;
 
-    String generateDailyQRCode(String businnessNumber) throws RemoteException;
+    byte[] generateDailyPseudonym(String businnessNumber, String location) throws RemoteException;
 
     VisitorInterface getVisitor(String number) throws RemoteException;
 

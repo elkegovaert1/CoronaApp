@@ -25,11 +25,9 @@ same user token)
 
 Upon receiving a capsule, the mixing server first checks (a) the
 validity of the user token, and then verifies that (b) it is a token for
-that particular day and (c) it has not been spent before
+that particular day and (c) it has not been spent before*/
 
-This capsule contains the current time interval, a valid user token 𝑇𝑥 ,𝑑𝑎𝑦𝑖
-𝑢ser and the 3rd value in the QR code (i.e., 𝐻(𝑅𝑖, 𝑛𝑦𝑚𝐶𝐹,𝑑𝑎𝑦𝑖) ).
- */
+
 
 import MatchingService.MatchingInterface;
 import javafx.application.Platform;
@@ -38,19 +36,32 @@ import javafx.collections.ObservableList;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.Signature;
 import java.time.LocalDate;
 import java.util.List;
 
+import javax.crypto.SecretKey;
+
 public class MixingProxy extends UnicastRemoteObject implements MixingProxyInterface {
 
-    public static ObservableList<String> capsules;
+    public static ObservableList<Capsule> capsules;
+    private static PrivateKey sk; //used to sign capsules
+    private static PublicKey pk; //used by visitor to verify signing
 
     public MixingProxy () throws RemoteException {
         capsules = FXCollections.observableArrayList();
+        KeyPair keypair = generateRSAKkeyPair();
+        sk = keypair.getPrivate();
+        pk = keypair.getPublic();
     }
 
     @Override
-    public boolean addCapsule(String newCapsule) throws RemoteException {
+    public boolean addCapsule(Capsule newCapsule) throws RemoteException {
         boolean accepted = controlCapsule(newCapsule);
 
         // voeg capsules toe
@@ -64,31 +75,36 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
     }
 
     @Override
-    public boolean controlCapsule(String newCapsule) throws RemoteException {
+    public byte[] controlCapsule(Capsule newCapsule) throws RemoteException {
         // controle legite capsule
-        String [] information = newCapsule.split(";");
-        String code = information[0];
-        String date = information[1];
-        String token = information[2];
+        byte[] code = newCapsule.getCatheringCode();
+        LocalDate date = newCapsule.getTime();
+        byte[] token = newCapsule.getVisitorToken();
+        
+        boolean isValid = true;
 
         // TODO: control the validity of the user token
+        //ask Registrar if token exist
+        //check if token isn't signed
 
         // controle datum
         String now = LocalDate.now().toString();
         if (!now.equals(date)) {
-            return false;
+            isValid =  false;
         }
 
         // als het niet al bevat
-        for (String c: capsules) {
-            String [] capsuleSplit = newCapsule.split(";");
-            if (capsuleSplit[2].equals(token)) {
-                return false;
+        for (Capsule c: capsules) {
+            if (c.getVisitorToken().equals(token)) {
+                isValid =  false;
             }
         }
-
-
-        return true;
+        if(isValid) {
+        	return sign(newCapsule.getCatheringCode());
+        	//sign token
+        }else {
+        	return newCapsule.getCatheringCode();
+        }
     }
 
     @Override
@@ -98,5 +114,19 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
         // remove data
         capsules.clear();
     }
-
+    public static KeyPair generateRSAKkeyPair() throws Exception{
+            SecureRandom secureRandom = new SecureRandom();
+     
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+     
+            keyPairGenerator.initialize(2048, secureRandom);
+     
+            return keyPairGenerator.generateKeyPair();
+    }
+    public static byte[] sign(byte[] input) throws Exception{ 
+            Signature signature = Signature.getInstance("SHA256withRSA"); 
+            signature.initSign(sk); 
+            signature.update(input); 
+            return signature.sign(); 
+    }
 }
