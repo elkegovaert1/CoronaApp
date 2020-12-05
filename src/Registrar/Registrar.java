@@ -51,7 +51,7 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     
     private static SecretKey s;
 
-    private Map<String, List<String>> userTokens; //key=phonenr || value=visitorTokens
+    private Map<String, List<byte[]>> userTokens; //key=phonenr || value=visitorTokens
     private Map<String, LocalDate> dateGeneratedTokens; // wanneer tokens laatste keer gegenereerd
 
     public Registrar() throws RemoteException {
@@ -199,17 +199,19 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 		}
     	return nym;        
     }
-    public void newDay() {
+    public void newDay() throws RemoteException{
     	for(CatheringInterface ci : catherings) {
     		byte[] nym = generateDailyPseudonym(ci.getBusinnessNumber(), ci.getLocation());
     		ci.receivePseudonym(nym);
     	}
     	for(VisitorInterface vi : visitors) {
+    		List<byte[]> tokens = new ArrayList<>();
     		for(int i=0;i<48;i++) {
-    			String token = "generateToken";
-        		vi.receiveToken(token);
+    			byte[] token = generateToken();
+        		tokens.add(token);
         		userTokens.get(vi.getNumber()).add(token);
-    		}    		    		
+    		} 
+    		vi.receiveTokens(tokens);
     	}
     }
  // Function to create a secret key 
@@ -268,5 +270,11 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
         byte[] result = cipher.doFinal(cipherText); 
   
         return new String(result); 
+    }
+    public static byte[] generateToken() {
+    	byte[] token = new byte[16]; 
+        SecureRandom secureRandom = new SecureRandom(); 
+        secureRandom.nextBytes(token); 
+        return token; 
     }
 }

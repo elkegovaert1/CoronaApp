@@ -1,13 +1,16 @@
 package Visitor;
 
+import MixingProxy.Capsule;
 import MixingProxy.MixingProxyInterface;
 import Registrar.RegistrarInterface;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.security.PublicKey;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 
 public class Visitor extends UnicastRemoteObject implements VisitorInterface {
     private static final int MAX_VISITS_ALLOWED = 3; // moet 48 zijn
@@ -17,20 +20,22 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
     private MixingProxyInterface mixingProxy;
     private int visits;
     private LocalDate lastUpdateTokens;
-    private List<String> tokens; // if token is used or not
+    private Stack<byte[]> tokens; // if token is used or not
     private List<String> log;
+    private PublicKey pk;
 
     public Visitor(String username, String userNumber, RegistrarInterface registrar, MixingProxyInterface mixingProxy) throws RemoteException {
         this.name = username;
         this.userNumber = userNumber;
         this.registrar = registrar;
         this.mixingProxy = mixingProxy;
-        this.tokens = registrar.getTokens(userNumber);
+        this.pk = mixingProxy.getPublicKey();
         this.log = new ArrayList<>();
+        this.tokens = new Stack<>();
         visits = 0;
         lastUpdateTokens = LocalDate.now();
     }
-
+    
     @Override
     public boolean visitCathering(String QRCode) throws RemoteException {
         // als aan max aantal visits || mogen tokens van gisteren niet gebruiken
@@ -42,10 +47,12 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
             String [] information = QRCode.split(";");
 
             // toevoegen aan capsules die moeten verzonden worden
-            String token = tokens.get(0);
+            byte[] token = tokens.get(0);
+            
+            Capsule capsule = new Capsule(LocalDate.now(), token, information[2].getBytes());
 
             // naar de mixing proxy sturen (unieke code + vandaag + token)
-            boolean accepted = mixingProxy.addCapsule(QRCode + ";" + LocalDate.now().toString() + ";" + token);
+            boolean accepted = mixingProxy.addCapsule(capsule, (VisitorInterface) this);
 
             // opslaan in log
             if (accepted) {
@@ -70,7 +77,7 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
     // kijken of er nieuwe tokens opgehaald moeten worden
     @Override
     public void updateTokens() throws RemoteException {
-        List<String> newTokens = registrar.getTokens(userNumber);
+        List<byte[]> newTokens = registrar.getTokens(userNumber);
         if (!newTokens.isEmpty()) { // krijgt geen nieuwe tokens als die er al gehad heeft die dag
             this.tokens = newTokens;
         }
@@ -91,5 +98,22 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
     public String getNumber() throws RemoteException {
         return userNumber;
     }
+
+	@Override
+	public void receiveTokens(List<byte[]> tokens) throws RemoteException {
+		this.tokens.clear();
+		this.tokens.addAll(tokens);		
+	}
+	//Deze methode wordt gebruikt om een gesigned token up te daten
+	@Override
+	public void setToken(byte[] oldToken, byte[] newToken) throws RemoteException {
+		for(byte[] token : tokens) {
+			if(token.equals(oldToken)) {
+				token = newToken;
+				break;
+			}
+		}
+		
+	}
 
 }

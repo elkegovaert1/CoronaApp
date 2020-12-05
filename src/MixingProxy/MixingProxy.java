@@ -30,6 +30,7 @@ that particular day and (c) it has not been spent before*/
 
 
 import MatchingService.MatchingInterface;
+import Visitor.VisitorInterface;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -59,10 +60,10 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
         sk = keypair.getPrivate();
         pk = keypair.getPublic();
     }
-
+    
     @Override
-    public boolean addCapsule(Capsule newCapsule) throws RemoteException {
-        boolean accepted = controlCapsule(newCapsule);
+    public boolean addCapsule(Capsule newCapsule, VisitorInterface vi) throws RemoteException {
+        boolean accepted = controlCapsule(newCapsule, vi);
 
         // voeg capsules toe
         if (accepted) {
@@ -75,7 +76,7 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
     }
 
     @Override
-    public byte[] controlCapsule(Capsule newCapsule) throws RemoteException {
+    public byte[] controlCapsule(Capsule newCapsule, VisitorInterface vi) throws RemoteException {
         // controle legite capsule
         byte[] code = newCapsule.getCatheringCode();
         LocalDate date = newCapsule.getTime();
@@ -100,8 +101,8 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
             }
         }
         if(isValid) {
-        	return sign(newCapsule.getCatheringCode());
-        	//sign token
+        	vi.setToken(newCapsule.getVisitorToken(), signToken(newCapsule.getVisitorToken()));
+        	return signCode(newCapsule.getCatheringCode());
         }else {
         	return newCapsule.getCatheringCode();
         }
@@ -123,10 +124,21 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
      
             return keyPairGenerator.generateKeyPair();
     }
-    public static byte[] sign(byte[] input) throws Exception{ 
+    public static byte[] signToken(byte[] input) throws Exception{
+    	Signature signature = Signature.getInstance("SHA256withRSA");
+    	signature.initSign(sk);
+    	signature.update(input);
+    	return signature.sign();
+    }
+    public static byte[] signCode(byte[] input) throws Exception{ 
             Signature signature = Signature.getInstance("SHA256withRSA"); 
             signature.initSign(sk); 
             signature.update(input); 
             return signature.sign(); 
     }
+
+	@Override
+	public PublicKey getPublicKey() throws RemoteException {
+		return pk;
+	}
 }
