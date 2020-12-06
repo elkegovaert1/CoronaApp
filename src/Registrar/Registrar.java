@@ -13,6 +13,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.*;
 
 import javax.crypto.Cipher;
@@ -78,6 +80,13 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
                 visitors.add(vi);
                 visitorNameNumber.add(vi.getName() + "[" +vi.getNumber() + "]");
                 System.out.println("New user: " + vi.getName());
+                List<byte[]> tokens = new ArrayList<>();
+        		for(int i=0;i<48;i++) {
+        			byte[] token = generateToken();
+            		tokens.add(token);
+            		userTokens.get(vi.getNumber()).add(token);
+        		} 
+        		vi.receiveTokens(tokens);
 
             } catch (RemoteException e) {
                 e.printStackTrace();
@@ -94,6 +103,8 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
                 catherings.add(ci);
                 catheringNameNumber.add(ci.getCatheringName() + "[" +ci.getBusinnessNumber() + "]");
                 System.out.println("New cathering facility: " + ci.getCatheringName());
+                byte[] nym = generateDailyPseudonym(ci.getBusinnessNumber(), ci.getLocation());
+        		ci.receivePseudonym(nym);
 
             } catch (RemoteException e) {
                 e.printStackTrace();
@@ -177,24 +188,27 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 
     @Override
     public byte[] generateDailyPseudonym(String businnessNumber, String location) throws RemoteException {
-    	String plainText = businnessNumber + ";" + LocalDate.now().toString(); 
-
+    	// mm/dd/yyyy
+    	String date = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).format(LocalDate.now());		
+    	String plainText = businnessNumber + ";" + date;
+    			
+    	
     // Encrypting the message 
     // using the symmetric key 
     	byte[] cipherText = null;
     	try {
-        	cipherText = do_AESEncryption(plainText, s, createInitializationVector()); 
+        	cipherText = do_AESEncryption(plainText, s);  //Represents S(CF,day)
     	}catch(Exception e) {
     		e.printStackTrace();
     	}
-    	MessageDigest digest;
+    	MessageDigest md;
     	byte[] nym = null;
 		try {
-			digest = MessageDigest.getInstance("SHA-256");
-			String strToHash = cipherText.toString() + ";" + location + ";" + LocalDate.now().toString();
-			nym = digest.digest(strToHash.getBytes(StandardCharsets.UTF_8));
+			md = MessageDigest.getInstance("SHA-256");
+			String strToHash = location + ";" + date;
+			md.update(cipherText); //cipherText is used as salt
+			nym = md.digest(strToHash.getBytes(StandardCharsets.UTF_8));
 		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
     	return nym;        
@@ -221,37 +235,18 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
         // SecureRandom class. 
         SecureRandom securerandom = new SecureRandom(); 
   
-        // Passing the string to 
-        // KeyGenerator 
+        // Passing the string to KeyGenerator 
         KeyGenerator keygenerator = KeyGenerator.getInstance("AES"); 
   
-        // Initializing the KeyGenerator 
-        // with 256 bits. 
+        // Initializing the KeyGenerator with 256 bits. 
         keygenerator.init(256, securerandom); 
         SecretKey key = keygenerator.generateKey(); 
         return key; 
     } 
- // Function to initialize a vector 
-    // with an arbitrary value 
-    public static byte[] createInitializationVector() {   
-        // Used with encryption 
-        byte[] initializationVector = new byte[16]; 
-        SecureRandom secureRandom = new SecureRandom(); 
-        secureRandom.nextBytes(initializationVector); 
-        return initializationVector; 
-    }
- // This function takes plaintext, 
-    // the key with an initialization 
-    // vector to convert plainText 
-    // into CipherText. 
-    public static byte[] do_AESEncryption(String plainText, SecretKey secretKey, 
-    		byte[] initializationVector) throws Exception { 
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING"); 
-  
-        IvParameterSpec ivParameterSpec = new IvParameterSpec(initializationVector); 
-  
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivParameterSpec); 
-  
+    
+    public static byte[] do_AESEncryption(String plainText, SecretKey secretKey) throws Exception {    	
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");   
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey);   
         return cipher.doFinal(plainText.getBytes()); 
     } 
  // This function performs the 
@@ -277,4 +272,38 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
         secureRandom.nextBytes(token); 
         return token; 
     }
+
+	@Override
+	public void informCathering(String datetime, String CF) throws RemoteException{
+		for(CatheringInterface ci : catherings) {
+			if(ci.getBusinnessNumber().equals(CF)) {
+				String s = "There was an infected visitor in your business [" + datetime + "]";
+				ci.receiveMessage(s);
+			}
+		}
+    	
+		
+	}
+
+	@Override
+	public byte[] getPseudonym(CatheringInterface ci, String date) throws RemoteException {
+		byte[] cipherText = null;
+		String plaintext = ci.getBusinnessNumber() + ";" + date;
+    	try {
+        	cipherText = do_AESEncryption(plaintext, s);
+    	}catch(Exception e) {
+    		e.printStackTrace();
+    	}
+    	MessageDigest md;
+    	byte[] nym = null;
+    	try {
+			md = MessageDigest.getInstance("SHA-256");
+			String strToHash = ci.getLocation() + ";" + date;
+			md.update(cipherText); //cipherText is used as salt
+			nym = md.digest(strToHash.getBytes(StandardCharsets.UTF_8));
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+    	return nym;
+	}
 }

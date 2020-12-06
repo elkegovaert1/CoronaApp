@@ -28,7 +28,7 @@ public class Cathering extends UnicastRemoteObject implements CatheringInterface
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] R = getSalt();
             md.update(R);//Salt represent R
-            byte[] hash = md.digest(nym);//Represents H(Ri, nym) has to be used for signature
+            byte[] hash = md.digest(nym);//Represents H(Ri, nym), has to be used for signature
             dailyQRCode = R.toString() + ";" + businnessNumber + ";" + hash;
     	}catch(NoSuchAlgorithmException e) {
     		e.printStackTrace();

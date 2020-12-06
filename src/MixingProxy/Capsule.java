@@ -1,23 +1,22 @@
 package MixingProxy;
 
-import java.time.LocalDate;
 
 public class Capsule {
-	private LocalDate time;
+	private int timeHour;
 	private byte[] visitorToken;
-	private byte[] catheringCode;
+	private byte[] catheringCode; //HRnym
 	
 	
-	public Capsule(LocalDate time, byte[] token, byte[] code) {
-		this.time = time;
+	public Capsule(int time, byte[] token, byte[] code) {
+		this.timeHour = time;
 		visitorToken = token;
 		catheringCode = code;
 	}
-	public LocalDate getTime() {
-		return time;
+	public int getTime() {
+		return timeHour;
 	}
-	public void setTime(LocalDate time) {
-		this.time = time;
+	public void setTime(int time) {
+		this.timeHour = time;
 	}
 	public byte[] getVisitorToken() {
 		return visitorToken;

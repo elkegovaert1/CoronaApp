@@ -8,9 +8,12 @@ import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.PublicKey;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
+
+import Doctor.DoctorInterface;
 
 public class Visitor extends UnicastRemoteObject implements VisitorInterface {
     private static final int MAX_VISITS_ALLOWED = 3; // moet 48 zijn
@@ -18,15 +21,18 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
     private String userNumber;
     private RegistrarInterface registrar;
     private MixingProxyInterface mixingProxy;
+    private DoctorInterface doctor;
     private int visits;
     private LocalDate lastUpdateTokens;
     private Stack<byte[]> tokens; // if token is used or not
     private List<String> log;
-    private PublicKey pk;
+    private PublicKey pk; //To check if QR-code is signed
 
-    public Visitor(String username, String userNumber, RegistrarInterface registrar, MixingProxyInterface mixingProxy) throws RemoteException {
+    public Visitor(String username, String userNumber, DoctorInterface doctor, 
+    		RegistrarInterface registrar, MixingProxyInterface mixingProxy) throws RemoteException {
         this.name = username;
         this.userNumber = userNumber;
+        this.doctor = doctor;
         this.registrar = registrar;
         this.mixingProxy = mixingProxy;
         this.pk = mixingProxy.getPublicKey();
@@ -47,9 +53,9 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
             String [] information = QRCode.split(";");
 
             // toevoegen aan capsules die moeten verzonden worden
-            byte[] token = tokens.get(0);
+            byte[] token = tokens.pop();
             
-            Capsule capsule = new Capsule(LocalDate.now(), token, information[2].getBytes());
+            Capsule capsule = new Capsule(LocalTime.now().getHour(), token, information[2].getBytes());
 
             // naar de mixing proxy sturen (unieke code + vandaag + token)
             boolean accepted = mixingProxy.addCapsule(capsule, (VisitorInterface) this);
@@ -113,6 +119,12 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
 				break;
 			}
 		}
+		
+	}
+
+	@Override
+	public List<String> getLogsFromTwoDays() throws RemoteException {
+		List<String> ret = new ArrayList<>();
 		
 	}
 

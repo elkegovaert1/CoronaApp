@@ -11,9 +11,9 @@ public interface MixingProxyInterface extends Remote {
 
     boolean addCapsule(Capsule capsule, VisitorInterface vi) throws RemoteException;
 
-    byte[] controlCapsule(Capsule newCapsule) throws RemoteException;
+    byte[] controlCapsule(Capsule newCapsule, VisitorInterface vi) throws RemoteException;
 
-    void flush(MatchingInterface matchingServer) throws RemoteException;
+    void flush() throws RemoteException;
     
     PublicKey getPublicKey() throws RemoteException;
 }

@@ -19,4 +19,7 @@ public interface VisitorInterface extends Remote {
     void updateTokens() throws RemoteException;
     
     void setToken(byte[] oldToken, byte[] newToken) throws RemoteException;
+    
+    List<String> getLogsFromTwoDays() throws RemoteException;
+
 }

@@ -53,12 +53,14 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
     public static ObservableList<Capsule> capsules;
     private static PrivateKey sk; //used to sign capsules
     private static PublicKey pk; //used by visitor to verify signing
+    private MatchingInterface matchingService;
 
-    public MixingProxy () throws RemoteException {
+    public MixingProxy (MatchingInterface mi) throws RemoteException {
         capsules = FXCollections.observableArrayList();
         KeyPair keypair = generateRSAKkeyPair();
         sk = keypair.getPrivate();
         pk = keypair.getPublic();
+        matchingService = mi;
     }
     
     @Override
@@ -101,6 +103,7 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
             }
         }
         if(isValid) {
+        	Platform.runLater(() -> capsules.add(newCapsule));
         	vi.setToken(newCapsule.getVisitorToken(), signToken(newCapsule.getVisitorToken()));
         	return signCode(newCapsule.getCatheringCode());
         }else {
@@ -109,8 +112,8 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
     }
 
     @Override
-    public void flush(MatchingInterface msi) throws RemoteException{
-        // send to matching server
+    public void flush() throws RemoteException{
+        matchingService.receiveCapsules(capsules);
 
         // remove data
         capsules.clear();

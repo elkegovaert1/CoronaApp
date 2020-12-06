@@ -24,5 +24,10 @@ public interface RegistrarInterface extends Remote {
     byte[] generateDailyPseudonym(String businnessNumber, String location) throws RemoteException;
 
     VisitorInterface getVisitor(String number) throws RemoteException;
+    
+    void informCathering(String HRnym, String datetime, String CF, String R) throws RemoteException;
+    
+    //function used for inspector
+    byte[] getPseudonym(CatheringInterface ci, String date) throws RemoteException;
 
 }
