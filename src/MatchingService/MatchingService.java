@@ -12,7 +12,11 @@ import Registrar.RegistrarInterface;
 
 public class MatchingService extends UnicastRemoteObject implements MatchingInterface {
 
-    public static ObservableList<Capsule> capsules;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 8962611190032735929L;
+	public static ObservableList<Capsule> capsules;
     private RegistrarInterface registrar;
 
     public MatchingService(RegistrarInterface ri) throws RemoteException {
@@ -35,15 +39,20 @@ public class MatchingService extends UnicastRemoteObject implements MatchingInte
 		}
 		
 	}
-	public static void warnVisitors(String HRnym, String datetime) {
+	public void warnVisitors(String HRnym, String datetime) {
 		//TODO 
 		//Ik stel voor om 24 tokens per dag te maken, dan hebben we 24 intervallen op een dag 
 		//en hoeven we enkel het afgeronde uur mee te geven in de capsules en logs
 	}
-	public static void warnCathering(String HRnym, String datetime, String CF, String R) {
+	public void warnCathering(String HRnym, String datetime, String CF, String R) {
 		for(Capsule c : capsules) {
 			if(HRnym.equals(c.getCatheringCode().toString())) {
-				registrar.informCathering(datetime, CF);
+				try {
+					registrar.informCathering(datetime, CF);
+				} catch (RemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 		}
 	}

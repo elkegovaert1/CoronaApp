@@ -7,6 +7,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 
+import javax.xml.bind.DatatypeConverter;
+
 import Cathering.CatheringInterface;
 import Registrar.RegistrarInterface;
 
@@ -18,14 +20,17 @@ public class Inspector implements InspectorInterface {
 		registrar = ri;
 	}
 	
-	private boolean inspectCathering(CatheringInterface ci, String QRCode) {
+	public boolean inspectCathering(String QRCode) throws RemoteException {
+		System.out.println("input: " + QRCode);
 		String[] arr = QRCode.split(";");
 		String R = arr[0];
 		String CF = arr[1];
-		String date = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).format(LocalDate.now());
+		LocalDate lDate = registrar.getDate();
+		String date = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).format(lDate);
+		System.out.println("Date: " + date);
 		byte[] nym = null;
 		try {
-			nym = registrar.getPseudonym(ci, date);
+			nym = registrar.getPseudonym(CF, date);
 		} catch (RemoteException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -33,12 +38,14 @@ public class Inspector implements InspectorInterface {
 		String dailyQRCode = null;
 		try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            md.update(R.getBytes());//Salt represent R
+            md.update(DatatypeConverter.parseHexBinary(R));//Salt represent R
             byte[] hashcode = md.digest(nym);//Represents H(Ri, nym), has to be used for signature
-            dailyQRCode = R + ";" + CF + ";" + hashcode;
+            dailyQRCode = R + ";" + CF + ";" + 
+            			DatatypeConverter.printHexBinary(hashcode);
     	}catch(NoSuchAlgorithmException e) {
     		e.printStackTrace();
     	}
+		System.out.println("output: " + dailyQRCode);
 		if(QRCode.equals(dailyQRCode)) {
 			return true;
 		}else {

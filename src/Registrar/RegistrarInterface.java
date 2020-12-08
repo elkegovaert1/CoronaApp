@@ -1,11 +1,16 @@
 package Registrar;
 
-import Cathering.CatheringInterface;
+
 import Visitor.VisitorInterface;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.time.LocalDate;
 import java.util.List;
+
+import Cathering.CatheringInterface;
+
+
 
 public interface RegistrarInterface extends Remote {
 
@@ -14,7 +19,7 @@ public interface RegistrarInterface extends Remote {
 
 
     void disconnectVisitor(VisitorInterface vi) throws RemoteException;
-    void disconnectCathering(CatheringInterface ci) throws RemoteException;
+    void disconnectCathering(CatheringInterface catheringInterface) throws RemoteException;
 
     List<String> getTokens(String number) throws RemoteException;
 
@@ -25,9 +30,11 @@ public interface RegistrarInterface extends Remote {
 
     VisitorInterface getVisitor(String number) throws RemoteException;
     
-    void informCathering(String HRnym, String datetime, String CF, String R) throws RemoteException;
+    void informCathering(String datetime, String CF) throws RemoteException;
     
     //function used for inspector
-    byte[] getPseudonym(CatheringInterface ci, String date) throws RemoteException;
+    byte[] getPseudonym(String CF, String date) throws RemoteException;
+    
+    LocalDate getDate() throws RemoteException;
 
 }

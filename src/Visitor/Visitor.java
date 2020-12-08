@@ -16,7 +16,11 @@ import java.util.Stack;
 import Doctor.DoctorInterface;
 
 public class Visitor extends UnicastRemoteObject implements VisitorInterface {
-    private static final int MAX_VISITS_ALLOWED = 3; // moet 48 zijn
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -4542222821435686339L;
+	private static final int MAX_VISITS_ALLOWED = 3; // moet 48 zijn
     private String name;
     private String userNumber;
     private RegistrarInterface registrar;
@@ -81,14 +85,14 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
     }
 
     // kijken of er nieuwe tokens opgehaald moeten worden
-    @Override
+    /*@Override
     public void updateTokens() throws RemoteException {
         List<byte[]> newTokens = registrar.getTokens(userNumber);
         if (!newTokens.isEmpty()) { // krijgt geen nieuwe tokens als die er al gehad heeft die dag
             this.tokens = newTokens;
         }
         lastUpdateTokens = LocalDate.now();
-    }
+    }*/
 
     @Override
     public void disconnected() throws RemoteException {
@@ -125,6 +129,14 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
 	@Override
 	public List<String> getLogsFromTwoDays() throws RemoteException {
 		List<String> ret = new ArrayList<>();
+		//TODO
+		return ret;
+		
+	}
+
+	@Override
+	public void updateTokens() throws RemoteException {
+		// TODO Auto-generated method stub
 		
 	}
 

@@ -1,6 +1,9 @@
 package Cathering;
 
-import Registrar.RegistrarInterface;
+
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.ObservableStringValue;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -8,18 +11,28 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
+import javax.xml.bind.DatatypeConverter;
+
+import Registrar.RegistrarInterface;
+
 public class Cathering extends UnicastRemoteObject implements CatheringInterface {
-    private String catheringName;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -8574034096812967296L;
+	private String catheringName;
     private String businnessNumber;
     private RegistrarInterface registrar;
-    private String dailyQRCode;
     private byte[] nym;
     private String location;
+    private StringProperty dailyQRCode;
 
-    public Cathering(String catheringName, String businnessNumber, RegistrarInterface registrar) throws RemoteException {
+    public Cathering(String catheringName, String businnessNumber, String location, RegistrarInterface registrar) throws RemoteException {
         this.catheringName = catheringName;
         this.registrar = registrar;
+        this.location = location;
         this.businnessNumber = businnessNumber;
+        dailyQRCode = new SimpleStringProperty();
     }
     
     @Override
@@ -29,7 +42,10 @@ public class Cathering extends UnicastRemoteObject implements CatheringInterface
             byte[] R = getSalt();
             md.update(R);//Salt represent R
             byte[] hash = md.digest(nym);//Represents H(Ri, nym), has to be used for signature
-            dailyQRCode = R.toString() + ";" + businnessNumber + ";" + hash;
+            this.dailyQRCode.setValue(DatatypeConverter.printHexBinary(R) + ";" + businnessNumber + ";" +
+            		DatatypeConverter.printHexBinary(hash));
+            CatheringScreen.setQrcode(dailyQRCode.getValue());
+            System.out.println("QR: " + dailyQRCode);
     	}catch(NoSuchAlgorithmException e) {
     		e.printStackTrace();
     	}    	
@@ -37,7 +53,7 @@ public class Cathering extends UnicastRemoteObject implements CatheringInterface
 
     @Override
     public void disconnected () throws RemoteException {
-        registrar.disconnectCathering(this);
+        registrar.disconnectCathering((CatheringInterface) this);
     }
 
     @Override
@@ -51,7 +67,8 @@ public class Cathering extends UnicastRemoteObject implements CatheringInterface
     }
 
     @Override
-    public String getDailyQRCode() {
+    public StringProperty getDailyQRCode() {
+    	System.out.println("QR-code: " + dailyQRCode);
         return dailyQRCode;
     }
 
@@ -60,11 +77,6 @@ public class Cathering extends UnicastRemoteObject implements CatheringInterface
 		return location;
 	}
 
-	@Override
-	public void setDailyQRCode() throws RemoteException {
-		// TODO Auto-generated method stub
-		
-	}
 
 	@Override
 	public void receivePseudonym(byte[] nym) throws RemoteException {

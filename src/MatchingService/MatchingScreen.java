@@ -12,9 +12,13 @@ import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+
+import MixingProxy.Capsule;
+import Registrar.RegistrarInterface;
 
 
 public class MatchingScreen extends Application {
@@ -37,13 +41,22 @@ public class MatchingScreen extends Application {
         rootPane.setVgap(10);
         rootPane.setHgap(10);
 
-        Registry registry = LocateRegistry.createRegistry(1101);
-        MatchingService matchingService = new MatchingService();
-        registry.rebind("MatchingService", matchingService);
-        System.out.println("[System] Matching Service is ready.");
-
+        Registry createRegistry = LocateRegistry.createRegistry(1101);
+        Registry registrarRegistry = LocateRegistry.getRegistry("localhost", 1099);
+        RegistrarInterface registrar;
+        MatchingService matchingService = null;
+		try {
+			registrar = (RegistrarInterface) registrarRegistry.lookup("Registrar");
+			matchingService = new MatchingService(registrar);
+			createRegistry.rebind("MatchingService", matchingService);
+	        System.out.println("[System] Matching Service is ready.");
+		} catch (NotBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}       
+        
         Label matchingServerState = new Label("State of Matching Server");
-        ListView<String> mss = new ListView<>();
+        ListView<Capsule> mss = new ListView<>();
         mss.setItems(matchingService.capsules);
 
         rootPane.add(matchingServerState, 0, 0);

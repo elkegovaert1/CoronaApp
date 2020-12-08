@@ -50,26 +50,36 @@ import javax.crypto.SecretKey;
 
 public class MixingProxy extends UnicastRemoteObject implements MixingProxyInterface {
 
-    public static ObservableList<Capsule> capsules;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 6198417477899452462L;
+	public static ObservableList<Capsule> capsules;
     private static PrivateKey sk; //used to sign capsules
     private static PublicKey pk; //used by visitor to verify signing
     private MatchingInterface matchingService;
 
     public MixingProxy (MatchingInterface mi) throws RemoteException {
         capsules = FXCollections.observableArrayList();
-        KeyPair keypair = generateRSAKkeyPair();
-        sk = keypair.getPrivate();
-        pk = keypair.getPublic();
+        KeyPair keypair;
+		try {
+			keypair = generateRSAKkeyPair();
+			sk = keypair.getPrivate();
+	        pk = keypair.getPublic();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}        
         matchingService = mi;
     }
     
     @Override
     public boolean addCapsule(Capsule newCapsule, VisitorInterface vi) throws RemoteException {
-        boolean accepted = controlCapsule(newCapsule, vi);
-
+        byte[] signing = controlCapsule(newCapsule, vi);
+        boolean accepted = true;
         // voeg capsules toe
         if (accepted) {
-            Platform.runLater(() -> capsules.add(newCapsule + LocalDate.now().toString())); // mixing proxy voegt nogmaals data toe als check
+            Platform.runLater(() -> capsules.add(newCapsule/* + LocalDate.now().toString()*/)); // mixing proxy voegt nogmaals data toe als check
             return true;
         } else {
             return false;
@@ -81,7 +91,7 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
     public byte[] controlCapsule(Capsule newCapsule, VisitorInterface vi) throws RemoteException {
         // controle legite capsule
         byte[] code = newCapsule.getCatheringCode();
-        LocalDate date = newCapsule.getTime();
+        int hour = newCapsule.getTime();
         byte[] token = newCapsule.getVisitorToken();
         
         boolean isValid = true;
@@ -92,7 +102,7 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 
         // controle datum
         String now = LocalDate.now().toString();
-        if (!now.equals(date)) {
+        if (!now.equals(hour)) {
             isValid =  false;
         }
 
@@ -104,8 +114,19 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
         }
         if(isValid) {
         	Platform.runLater(() -> capsules.add(newCapsule));
-        	vi.setToken(newCapsule.getVisitorToken(), signToken(newCapsule.getVisitorToken()));
-        	return signCode(newCapsule.getCatheringCode());
+        	try {
+				vi.setToken(newCapsule.getVisitorToken(), signToken(newCapsule.getVisitorToken()));
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+        	try {
+				return signCode(newCapsule.getCatheringCode());
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return null;
+			}
         }else {
         	return newCapsule.getCatheringCode();
         }

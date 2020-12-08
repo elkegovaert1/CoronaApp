@@ -13,12 +13,14 @@ import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 public class MixingProxyScreen extends Application {
     public MatchingInterface matchingServer;
+    public MixingProxy mixingProxy;
 
     public static void main(String[] args) throws RemoteException {
         launch();
@@ -40,28 +42,27 @@ public class MixingProxyScreen extends Application {
         rootPane.setHgap(10);
 
         Registry registryCreate = LocateRegistry.createRegistry(1100);
-        MixingProxy mixingProxy = new MixingProxy();
-        registryCreate.rebind("MixingProxy", mixingProxy);
-        System.out.println("[System] Mixing proxy is ready.");
-
         // find matching server
         try {
             Registry myRegistryGet = LocateRegistry.getRegistry("localhost", 1101);
             matchingServer = (MatchingInterface) myRegistryGet.lookup("MatchingService");
+            mixingProxy = new MixingProxy(matchingServer);
+            registryCreate.rebind("MixingProxy", mixingProxy);
+            System.out.println("[System] Mixing proxy is ready.");
         } catch (Exception e) {
             e.printStackTrace();
         }
 
 
         Label queueLabel = new Label("Queue of capsules");
-        ListView<String> queueView = new ListView<>();
+        ListView<Capsule> queueView = new ListView<>();
         queueView.setItems(mixingProxy.capsules);
 
         Button flushCapsules = new Button("Flush");
 
         flushCapsules.setOnAction(Event -> {
             try {
-                mixingProxy.flush(matchingServer);
+                mixingProxy.flush();
             } catch (RemoteException e) {
                 e.printStackTrace();
             }

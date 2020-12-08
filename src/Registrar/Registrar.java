@@ -1,6 +1,6 @@
 package Registrar;
 
-import Cathering.CatheringInterface;
+
 import Visitor.VisitorInterface;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -12,17 +12,24 @@ import java.rmi.server.UnicastRemoteObject;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.spec.KeySpec;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.DatatypeConverter;
 
-//import javax.xml.bind.DatatypeConverter; 
+import Cathering.CatheringInterface;
+
 
 
 /*
@@ -43,7 +50,15 @@ and the tokens that were issued
  */
 
 public class Registrar extends UnicastRemoteObject implements RegistrarInterface {
-    private static final int MAX_VISITS_ALLOWED = 3; // moet 48 zijn
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -7945048366389923378L;
+
+	
+	
+
+	private static final int MAX_VISITS_ALLOWED = 3; // moet 48 zijn
 
     private List<VisitorInterface> visitors;
     private List <CatheringInterface> catherings;
@@ -51,7 +66,14 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     public static ObservableList<String> visitorNameNumber;
     public static ObservableList<String> catheringNameNumber;
     
-    private static SecretKey s;
+    private static byte[] initializationVector;
+    
+    private static LocalDate lDate = LocalDate.now();
+    
+    //private static final String s = "boooooooooom!!!!";
+    private static final String salt = "ssshhhhhhhhhhh!!!!";
+    
+    private String s;
 
     private Map<String, List<byte[]>> userTokens; //key=phonenr || value=visitorTokens
     private Map<String, LocalDate> dateGeneratedTokens; // wanneer tokens laatste keer gegenereerd
@@ -63,13 +85,16 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
         catheringNameNumber = FXCollections.observableArrayList();
         dateGeneratedTokens = new HashMap<>();
         userTokens = new HashMap<>();
+        //initializationVector = createInitializationVector();
+        
+        
         try{
-        	s = createAESKey();
+        	createAESKey();
+        	System.out.println("Secret key: " + s);
         }catch(Exception e) {
         	e.printStackTrace();
         }
-        //System.out.println("The Secret Key is :" + DatatypeConverter.printHexBinary( s.getEncoded())); 
-        //IK KAN DEZE PACKAGE (datatypeconverter) NIET IMPORTEREN, JIJ?
+        //System.out.println("The Secret Key is :" + s); 
     }
 
     @Override
@@ -189,7 +214,8 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     @Override
     public byte[] generateDailyPseudonym(String businnessNumber, String location) throws RemoteException {
     	// mm/dd/yyyy
-    	String date = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).format(LocalDate.now());		
+    	String date = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).format(lDate);
+    	System.out.println("Date: " + date);
     	String plainText = businnessNumber + ";" + date;
     			
     	
@@ -198,6 +224,7 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     	byte[] cipherText = null;
     	try {
         	cipherText = do_AESEncryption(plainText, s);  //Represents S(CF,day)
+        	//System.out.println("Key gen: " + DatatypeConverter.printHexBinary(cipherText));
     	}catch(Exception e) {
     		e.printStackTrace();
     	}
@@ -208,12 +235,14 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 			String strToHash = location + ";" + date;
 			md.update(cipherText); //cipherText is used as salt
 			nym = md.digest(strToHash.getBytes(StandardCharsets.UTF_8));
+			//System.out.println("Nym gen: " + DatatypeConverter.printHexBinary(nym));
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
     	return nym;        
     }
     public void newDay() throws RemoteException{
+    	lDate = lDate.plus(1, ChronoUnit.DAYS);
     	for(CatheringInterface ci : catherings) {
     		byte[] nym = generateDailyPseudonym(ci.getBusinnessNumber(), ci.getLocation());
     		ci.receivePseudonym(nym);
@@ -227,9 +256,10 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     		} 
     		vi.receiveTokens(tokens);
     	}
+    	
     }
  // Function to create a secret key 
-    public static SecretKey createAESKey() throws Exception { 
+    public void createAESKey() throws Exception { 
   
         // Creating a new instance of 
         // SecureRandom class. 
@@ -237,16 +267,25 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
   
         // Passing the string to KeyGenerator 
         KeyGenerator keygenerator = KeyGenerator.getInstance("AES"); 
-  
+        
         // Initializing the KeyGenerator with 256 bits. 
         keygenerator.init(256, securerandom); 
         SecretKey key = keygenerator.generateKey(); 
-        return key; 
+        s = DatatypeConverter.printHexBinary(key.getEncoded()); 
     } 
     
-    public static byte[] do_AESEncryption(String plainText, SecretKey secretKey) throws Exception {    	
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");   
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey);   
+    public static byte[] do_AESEncryption(String plainText, String secret) throws Exception { 
+    	byte[] iv = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        IvParameterSpec ivspec = new IvParameterSpec(iv);
+         
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+		KeySpec spec = new PBEKeySpec(secret.toCharArray(), salt.getBytes(), 65536, 256);
+        SecretKey tmp = factory.generateSecret(spec);
+        SecretKeySpec secretKey = new SecretKeySpec(tmp.getEncoded(), "AES");
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING"); 
+        
+        //System.out.println(DatatypeConverter.printHexBinary(secretKey.getEncoded()));
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivspec);   
         return cipher.doFinal(plainText.getBytes()); 
     } 
  // This function performs the 
@@ -259,7 +298,7 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     	Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING"); 
   
         IvParameterSpec ivParameterSpec = new IvParameterSpec(initializationVector); 
-  
+        //System.out.println("InitVector: " + DatatypeConverter.printHexBinary(initializationVector));
         cipher.init(Cipher.DECRYPT_MODE, secretKey, ivParameterSpec); 
   
         byte[] result = cipher.doFinal(cipherText); 
@@ -278,7 +317,7 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 		for(CatheringInterface ci : catherings) {
 			if(ci.getBusinnessNumber().equals(CF)) {
 				String s = "There was an infected visitor in your business [" + datetime + "]";
-				ci.receiveMessage(s);
+				//ci.receiveMessage(s);
 			}
 		}
     	
@@ -286,14 +325,23 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 	}
 
 	@Override
-	public byte[] getPseudonym(CatheringInterface ci, String date) throws RemoteException {
+	public byte[] getPseudonym(String CF, String date) throws RemoteException {
+		CatheringInterface ci = null;
+    	for(CatheringInterface c : catherings) {
+    		if(c.getBusinnessNumber().equals(CF)) {
+    			ci = c;
+    			break;
+    		}
+    	}
+    	
 		byte[] cipherText = null;
 		String plaintext = ci.getBusinnessNumber() + ";" + date;
     	try {
         	cipherText = do_AESEncryption(plaintext, s);
+        	System.out.println("controle key: " + DatatypeConverter.printHexBinary(cipherText));
     	}catch(Exception e) {
     		e.printStackTrace();
-    	}
+    	}    	
     	MessageDigest md;
     	byte[] nym = null;
     	try {
@@ -301,9 +349,28 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 			String strToHash = ci.getLocation() + ";" + date;
 			md.update(cipherText); //cipherText is used as salt
 			nym = md.digest(strToHash.getBytes(StandardCharsets.UTF_8));
+			System.out.println("Nym control: " + DatatypeConverter.printHexBinary(nym));
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
     	return nym;
 	}
+	public static byte[] createInitializationVector() 
+    { 
+  
+        // Used with encryption 
+        byte[] initializationVector 
+            = new byte[16]; 
+        SecureRandom secureRandom 
+            = new SecureRandom(); 
+        secureRandom.nextBytes(initializationVector); 
+        System.out.println(DatatypeConverter.printHexBinary(initializationVector));
+        return initializationVector; 
+    }
+
+	@Override
+	public LocalDate getDate() throws RemoteException {
+		return lDate;
+	}
+
 }

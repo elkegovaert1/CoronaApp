@@ -1,8 +1,9 @@
 package Cathering;
 
-import Registrar.RegistrarInterface;
-import Visitor.Visitor;
+
 import javafx.application.Application;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -17,11 +18,16 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
+import Registrar.RegistrarInterface;
+
 public class CatheringScreen extends Application {
+	private static StringProperty qr = new SimpleStringProperty();
+	private static Label qrCode = new Label();
     public RegistrarInterface registrar;
     public Cathering cathering;
 
     public static void main(String[] args) throws RemoteException {
+    	//System.setSecurityManager(new SecurityManager());
         launch();
     }
 
@@ -41,16 +47,18 @@ public class CatheringScreen extends Application {
 
         TextField nameField = new TextField();
         TextField numberField = new TextField();
+        TextField locationField = new TextField();
 
         Label nameLabel = new Label("Name");
         Label numberLabel = new Label("Businness Number");
+        Label locationLabel = new Label("Location");
         Label errorLabel = new Label();
 
         Button submitCatheringInfoButton = new Button("Done");
 
         submitCatheringInfoButton.setOnAction(Event -> {
             try {
-
+            	//System.setProperty("java.rmi.server.hostname","127.0.0.1");
                 Registry myRegistry = LocateRegistry.getRegistry("localhost", 1099);
                 registrar =  (RegistrarInterface) myRegistry.lookup("Registrar");
 
@@ -58,6 +66,7 @@ public class CatheringScreen extends Application {
 
                 String cathname = nameField.getText();
                 String businessNumber = numberField.getText();
+                String location = locationField.getText();
                 if (nameField.getText().isEmpty() || numberField.getText().isEmpty()) {
                     errorLabel.setText("Please fill in all fields.");
 
@@ -65,9 +74,9 @@ public class CatheringScreen extends Application {
                     errorLabel.setText("Businness number already in use");
 
                 } else {
-                    cathering = new Cathering(cathname, businessNumber, registrar);
+                    cathering = new Cathering(cathname, businessNumber, location, registrar);
 
-                    boolean isConnected = registrar.newCathering(cathering);
+                    boolean isConnected = registrar.newCathering((CatheringInterface) cathering);
                     if (!isConnected) {
                         errorLabel.setText("Could not connect.");
                     } else {
@@ -75,7 +84,7 @@ public class CatheringScreen extends Application {
 
                         /* Change the scene of the primaryStage */
                         primaryStage.close();
-                        primaryStage.setScene(makeChatUI(cathering, registrar));
+                        primaryStage.setScene(makeChatUI(registrar));
                         primaryStage.setTitle(cathering.getCatheringName());
                         primaryStage.show();
                     }
@@ -92,25 +101,27 @@ public class CatheringScreen extends Application {
         rootPane.add(nameLabel, 1, 0);
         rootPane.add(numberField, 0,1);
         rootPane.add(numberLabel, 1, 1);
+        rootPane.add(locationField, 0, 2);
+        rootPane.add(locationLabel, 1, 2);
         rootPane.add(submitCatheringInfoButton, 0, 3, 2, 1);
         rootPane.add(errorLabel, 0, 4);
 
         return new Scene(rootPane, 400, 400);
     }
 
-    public Scene makeChatUI(CatheringInterface ci, RegistrarInterface ri) throws RemoteException{
+    public Scene makeChatUI(RegistrarInterface ri) throws RemoteException{
         GridPane rootPane = new GridPane();
         rootPane.setPadding(new Insets(20));
         rootPane.setAlignment(Pos.CENTER);
         rootPane.setHgap(10);
         rootPane.setVgap(10);
 
-        cathering.setDailyQRCode();
 
+        Label QRCode = new Label();
+        //StringProperty sp = cathering.getDailyQRCode();*/
+        QRCode.textProperty().bind(qr);
 
-        Label QRCode = new Label(cathering.getDailyQRCode());
-
-        rootPane.add(QRCode, 0, 0);
+        rootPane.add(qrCode, 0, 0);
 
         return new Scene(rootPane, 600, 400);
 
@@ -123,5 +134,7 @@ public class CatheringScreen extends Application {
         }
         System.exit(0);
     }
-
+    public static void setQrcode(String qrcode) {    	
+    	qr.setValue(qrcode);
+    }
 }

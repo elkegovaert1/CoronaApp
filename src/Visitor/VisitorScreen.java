@@ -16,9 +16,12 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
+import Doctor.DoctorInterface;
+
 public class VisitorScreen extends Application {
     public RegistrarInterface registrar;
     public MixingProxyInterface mixingProxy;
+    public DoctorInterface doctor;
     public Visitor visitor;
 
     public static void main(String[] args) throws RemoteException {
@@ -55,6 +58,9 @@ public class VisitorScreen extends Application {
                 registrar =  (RegistrarInterface) registryRegistrar.lookup("Registrar");
                 Registry registryMixingProxy = LocateRegistry.getRegistry("localhost", 1100);
                 mixingProxy = (MixingProxyInterface) registryMixingProxy.lookup("MixingProxy");
+                Registry registryDoctor = LocateRegistry.getRegistry("localhost", 1102);
+                doctor = (DoctorInterface) registryDoctor.lookup("Doctor");
+                
 
                 System.out.println("[System] Visitor App is running");
 
@@ -67,7 +73,7 @@ public class VisitorScreen extends Application {
                     errorLabel.setText("Number already in use");
 
                 } else {
-                    visitor = new Visitor(username, userNumber, registrar, mixingProxy);
+                    visitor = new Visitor(username, userNumber, doctor, registrar, mixingProxy);
 
                     boolean isConnected = registrar.newVisitor(visitor);
                     if (!isConnected) {
