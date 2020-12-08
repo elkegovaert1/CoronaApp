@@ -1,7 +1,12 @@
 package MixingProxy;
 
+import java.io.Serializable;
 
-public class Capsule {
+import javax.xml.bind.DatatypeConverter;
+
+
+public class Capsule implements Serializable{
+	private static final long serialVersionUID = 32418571595068622L;
 	private int timeHour;
 	private byte[] visitorToken;
 	private byte[] catheringCode; //HRnym
@@ -30,6 +35,8 @@ public class Capsule {
 	public void setCatheringCode(byte[] catheringCode) {
 		this.catheringCode = catheringCode;
 	}
-	
-	
+	@Override
+	public String toString() {
+		return (this.timeHour + " " + DatatypeConverter.printHexBinary(visitorToken));
+	}
 }

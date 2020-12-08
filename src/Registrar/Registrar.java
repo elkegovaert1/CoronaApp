@@ -106,11 +106,11 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
                 visitorNameNumber.add(vi.getName() + "[" +vi.getNumber() + "]");
                 System.out.println("New user: " + vi.getName());
                 List<byte[]> tokens = new ArrayList<>();
-        		for(int i=0;i<48;i++) {
+        		for(int i=0;i<24;i++) {
         			byte[] token = generateToken();
-            		tokens.add(token);
-            		userTokens.get(vi.getNumber()).add(token);
+            		tokens.add(token);            		
         		} 
+        		userTokens.put(vi.getNumber(), tokens);
         		vi.receiveTokens(tokens);
 
             } catch (RemoteException e) {

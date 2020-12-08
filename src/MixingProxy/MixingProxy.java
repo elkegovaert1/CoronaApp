@@ -134,7 +134,9 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 
     @Override
     public void flush() throws RemoteException{
-        matchingService.receiveCapsules(capsules);
+    	for(Capsule c : capsules) {
+    		matchingService.receiveCapsule(c);
+    	}        
 
         // remove data
         capsules.clear();

@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
+import javax.xml.bind.DatatypeConverter;
+
 import Doctor.DoctorInterface;
 
 public class Visitor extends UnicastRemoteObject implements VisitorInterface {
@@ -32,7 +34,7 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
     private List<String> log;
     private PublicKey pk; //To check if QR-code is signed
 
-    public Visitor(String username, String userNumber, DoctorInterface doctor, 
+    public Visitor(String username, String userNumber,  
     		RegistrarInterface registrar, MixingProxyInterface mixingProxy) throws RemoteException {
         this.name = username;
         this.userNumber = userNumber;
@@ -112,7 +114,10 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
 	@Override
 	public void receiveTokens(List<byte[]> tokens) throws RemoteException {
 		this.tokens.clear();
-		this.tokens.addAll(tokens);		
+		this.tokens.addAll(tokens);	
+		for(byte[] token : this.tokens) {
+			System.out.println(DatatypeConverter.printHexBinary(token));
+		}
 	}
 	//Deze methode wordt gebruikt om een gesigned token up te daten
 	@Override

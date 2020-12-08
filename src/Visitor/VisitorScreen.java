@@ -58,8 +58,8 @@ public class VisitorScreen extends Application {
                 registrar =  (RegistrarInterface) registryRegistrar.lookup("Registrar");
                 Registry registryMixingProxy = LocateRegistry.getRegistry("localhost", 1100);
                 mixingProxy = (MixingProxyInterface) registryMixingProxy.lookup("MixingProxy");
-                Registry registryDoctor = LocateRegistry.getRegistry("localhost", 1102);
-                doctor = (DoctorInterface) registryDoctor.lookup("Doctor");
+                /*Registry registryDoctor = LocateRegistry.getRegistry("localhost", 1102);
+                doctor = (DoctorInterface) registryDoctor.lookup("Doctor");*/
                 
 
                 System.out.println("[System] Visitor App is running");
@@ -73,7 +73,7 @@ public class VisitorScreen extends Application {
                     errorLabel.setText("Number already in use");
 
                 } else {
-                    visitor = new Visitor(username, userNumber, doctor, registrar, mixingProxy);
+                    visitor = new Visitor(username, userNumber, registrar, mixingProxy);
 
                     boolean isConnected = registrar.newVisitor(visitor);
                     if (!isConnected) {

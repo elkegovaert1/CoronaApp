@@ -9,6 +9,7 @@ import Visitor.VisitorInterface;
 public class Doctor implements DoctorInterface{
 	
 	private MatchingInterface matchingService;
+	private DoctorScreen doctorScreen;
 	
 	public Doctor(MatchingInterface mi) {
 		matchingService = mi;

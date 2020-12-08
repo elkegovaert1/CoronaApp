@@ -23,8 +23,8 @@ public class MatchingService extends UnicastRemoteObject implements MatchingInte
         capsules = FXCollections.observableArrayList();
         registrar = ri;
     }
-    public void receiveCapsules(List<Capsule> capsules) throws RemoteException {
-    	this.capsules.addAll(capsules);
+    public void receiveCapsule(Capsule capsule) throws RemoteException {
+    	capsules.add(capsule);
     }
 	@Override
 	public void receivePosVisitor(List<String> logs) throws RemoteException {
@@ -44,7 +44,7 @@ public class MatchingService extends UnicastRemoteObject implements MatchingInte
 		//Ik stel voor om 24 tokens per dag te maken, dan hebben we 24 intervallen op een dag 
 		//en hoeven we enkel het afgeronde uur mee te geven in de capsules en logs
 	}
-	public void warnCathering(String HRnym, String datetime, String CF, String R) {
+	public void warnCathering(String HRnym, String datetime, String CF, String R) throws RemoteException {
 		for(Capsule c : capsules) {
 			if(HRnym.equals(c.getCatheringCode().toString())) {
 				try {

@@ -8,7 +8,7 @@ import MixingProxy.Capsule;
 
 public interface MatchingInterface extends Remote {
 
-	void receiveCapsules(List<Capsule> capsules) throws RemoteException;
+	void receiveCapsule(Capsule capsule) throws RemoteException;
 	
 	void receivePosVisitor(List<String> logs) throws RemoteException;
 }
