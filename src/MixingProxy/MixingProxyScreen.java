@@ -20,6 +20,7 @@ import java.rmi.registry.Registry;
 
 public class MixingProxyScreen extends Application {
     public MatchingInterface matchingServer;
+    public RegistrarInterface registrar;
     public MixingProxy mixingProxy;
 
     public static void main(String[] args) throws RemoteException {
@@ -46,7 +47,9 @@ public class MixingProxyScreen extends Application {
         try {
             Registry myRegistryGet = LocateRegistry.getRegistry("localhost", 1101);
             matchingServer = (MatchingInterface) myRegistryGet.lookup("MatchingService");
-            mixingProxy = new MixingProxy(matchingServer);
+            Registry registryRegistrar = LocateRegistry.getRegistry("localhost", 1099);
+            registrar = (RegistrarInterface) registryRegistrar.lookup("Registrar");
+            mixingProxy = new MixingProxy(matchingServer, registrar);
             registryCreate.rebind("MixingProxy", mixingProxy);
             System.out.println("[System] Mixing proxy is ready.");
         } catch (Exception e) {
@@ -62,7 +65,8 @@ public class MixingProxyScreen extends Application {
 
         flushCapsules.setOnAction(Event -> {
             try {
-                mixingProxy.flush();
+            	mixingProxy.incrementHour();
+                mixingProxy.flush();                
             } catch (RemoteException e) {
                 e.printStackTrace();
             }

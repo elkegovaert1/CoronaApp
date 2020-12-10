@@ -30,6 +30,7 @@ that particular day and (c) it has not been spent before*/
 
 
 import MatchingService.MatchingInterface;
+import Registrar.RegistrarInterface;
 import Visitor.VisitorInterface;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -44,9 +45,11 @@ import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import javax.crypto.SecretKey;
+import javax.xml.bind.DatatypeConverter;
 
 public class MixingProxy extends UnicastRemoteObject implements MixingProxyInterface {
 
@@ -58,8 +61,10 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
     private static PrivateKey sk; //used to sign capsules
     private static PublicKey pk; //used by visitor to verify signing
     private MatchingInterface matchingService;
+    private RegistrarInterface registrar;
+    private int hour;
 
-    public MixingProxy (MatchingInterface mi) throws RemoteException {
+    public MixingProxy (MatchingInterface mi, RegistrarInterface ri) throws RemoteException {
         capsules = FXCollections.observableArrayList();
         KeyPair keypair;
 		try {
@@ -71,15 +76,30 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 			e.printStackTrace();
 		}        
         matchingService = mi;
+        registrar = ri;
+        hour = LocalTime.now().getHour();
     }
     
     @Override
     public boolean addCapsule(Capsule newCapsule, VisitorInterface vi) throws RemoteException {
         byte[] signing = controlCapsule(newCapsule, vi);
-        boolean accepted = true;
+        boolean accepted = false;
+		try {
+			accepted = Verify_Digital_Signature(newCapsule.getCatheringCode(), signing, pk);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        	
+        
         // voeg capsules toe
         if (accepted) {
-            Platform.runLater(() -> capsules.add(newCapsule/* + LocalDate.now().toString()*/)); // mixing proxy voegt nogmaals data toe als check
+            Platform.runLater(() -> {
+            capsules.add(newCapsule);
+            System.out.println("New capsule: " + newCapsule.getTime() + ", " + 
+            		DatatypeConverter.printHexBinary(newCapsule.getVisitorToken()) + ", " + 
+            		DatatypeConverter.printHexBinary(newCapsule.getCatheringCode()));
+            });
             return true;
         } else {
             return false;
@@ -91,36 +111,47 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
     public byte[] controlCapsule(Capsule newCapsule, VisitorInterface vi) throws RemoteException {
         // controle legite capsule
         byte[] code = newCapsule.getCatheringCode();
-        int hour = newCapsule.getTime();
+        int hourCapsule = newCapsule.getTime();
         byte[] token = newCapsule.getVisitorToken();
         
         boolean isValid = true;
-
-        // TODO: control the validity of the user token
-        //ask Registrar if token exist
-        //check if token isn't signed
-
+        System.out.println("CatheringCode: " + DatatypeConverter.printHexBinary(code));
+        System.out.println("VisitorToken: " + DatatypeConverter.printHexBinary(token));
+        byte[] signing;
+		try {
+			signing = signCode(token);
+			System.out.println("VisitorToken[Signed]: " + DatatypeConverter.printHexBinary(signing));
+			if(registrar.checkToken(token, signing, pk)) {
+	        	newCapsule.setVisitorToken(signing);
+	        }else {
+	        	System.out.println("visitorToken not accepted");
+	        	isValid = false;
+	        }  
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			isValid = false;
+		}
+        
+             
+       /* the mixing server first checks (a) the
+        validity of the user token, and then verifies that (b) it is a token for
+        that particular day and (c) it has not been spent before*/
+        // a) zit in checkToken bij de registrar
+        // b) zit ook in checkToken bij de registrar (na elke dag worden de niet-signed tokens verwijderd)
+        // c) zit in signCode, elk token kan maar één keer gesigned worden
         // controle datum
-        String now = LocalDate.now().toString();
-        if (!now.equals(hour)) {
-            isValid =  false;
-        }
 
-        // als het niet al bevat
-        for (Capsule c: capsules) {
+        // als het niet al bevat -> is overbodig denk ik
+        /*for (Capsule c: capsules) {
             if (c.getVisitorToken().equals(token)) {
                 isValid =  false;
             }
-        }
+        }*/
         if(isValid) {
-        	Platform.runLater(() -> capsules.add(newCapsule));
         	try {
-				vi.setToken(newCapsule.getVisitorToken(), signToken(newCapsule.getVisitorToken()));
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-        	try {
+        		System.out.println("Gesigned: " + DatatypeConverter.printHexBinary(
+        				signCode(newCapsule.getCatheringCode())));
 				return signCode(newCapsule.getCatheringCode());
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -128,6 +159,7 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 				return null;
 			}
         }else {
+        	System.out.println("Original: " + DatatypeConverter.printHexBinary(newCapsule.getCatheringCode()));
         	return newCapsule.getCatheringCode();
         }
     }
@@ -140,22 +172,18 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 
         // remove data
         capsules.clear();
+        registrar.flush();
     }
     public static KeyPair generateRSAKkeyPair() throws Exception{
             SecureRandom secureRandom = new SecureRandom();
      
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
      
-            keyPairGenerator.initialize(2048, secureRandom);
+            keyPairGenerator.initialize(512, secureRandom);
      
             return keyPairGenerator.generateKeyPair();
     }
-    public static byte[] signToken(byte[] input) throws Exception{
-    	Signature signature = Signature.getInstance("SHA256withRSA");
-    	signature.initSign(sk);
-    	signature.update(input);
-    	return signature.sign();
-    }
+    
     public static byte[] signCode(byte[] input) throws Exception{ 
             Signature signature = Signature.getInstance("SHA256withRSA"); 
             signature.initSign(sk); 
@@ -166,5 +194,21 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 	@Override
 	public PublicKey getPublicKey() throws RemoteException {
 		return pk;
+	}
+	public static boolean Verify_Digital_Signature(byte[] input, byte[] signatureToVerify, PublicKey key)throws Exception 
+    { 
+        Signature signature = Signature.getInstance("SHA256withRSA"); 
+        signature.initVerify(key); 
+        signature.update(input); 
+        return signature.verify(signatureToVerify); 
+    }
+
+	@Override
+	public int getHour() throws RemoteException {
+		return hour;
+	}
+	
+	public void incrementHour() {
+		this.hour++;
 	}
 }

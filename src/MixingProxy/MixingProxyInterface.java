@@ -15,5 +15,7 @@ public interface MixingProxyInterface extends Remote {
 
     void flush() throws RemoteException;
     
+    int getHour() throws RemoteException;
+    
     PublicKey getPublicKey() throws RemoteException;
 }

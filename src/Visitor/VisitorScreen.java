@@ -114,7 +114,15 @@ public class VisitorScreen extends Application {
         rootPane.setVgap(10);
 
         Button visitCathering = new Button("Visit");
-
+        Button generateLog = new Button("QR-Logs");
+        generateLog.setOnAction(Event -> {
+        	try {
+				visitor.getLogsFromTwoDays();
+			} catch (RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+        });
         visitCathering.setOnAction(Event -> {
             home.close();
             home.setScene(makeVisitCatheringUI(home, visitor, registrar));
@@ -124,6 +132,7 @@ public class VisitorScreen extends Application {
         });
 
         rootPane.add(visitCathering, 0, 0);
+        rootPane.add(generateLog, 1, 0);
 
         return new Scene(rootPane, 600, 400);
 
@@ -178,6 +187,7 @@ public class VisitorScreen extends Application {
         leaveCathering.setOnAction(Event -> {
             visitAllowed.close();
             try {
+            	visitor.exitCathering();
                 visitAllowed.setScene(makeHomeUI(visitAllowed, visitor, registrar));
                 visitAllowed.setTitle(visitor.getName());
             } catch (RemoteException e) {

@@ -9,9 +9,14 @@ import javafx.collections.ObservableList;
 import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Signature;
 import java.security.spec.KeySpec;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -74,8 +79,12 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     private static final String salt = "ssshhhhhhhhhhh!!!!";
     
     private String s;
+    
+    private PrivateKey sk;
+    private PublicKey pk;
 
     private Map<String, List<byte[]>> userTokens; //key=phonenr || value=visitorTokens
+    private Map<String, List<byte[]>> signedTokens;
     private Map<String, LocalDate> dateGeneratedTokens; // wanneer tokens laatste keer gegenereerd
 
     public Registrar() throws RemoteException {
@@ -85,8 +94,16 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
         catheringNameNumber = FXCollections.observableArrayList();
         dateGeneratedTokens = new HashMap<>();
         userTokens = new HashMap<>();
-        //initializationVector = createInitializationVector();
-        
+        signedTokens = new HashMap<>();
+        KeyPair keypair;
+		try {
+			keypair = generateRSAKkeyPair();
+			sk = keypair.getPrivate();
+	        pk = keypair.getPublic();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         
         try{
         	createAESKey();
@@ -111,6 +128,7 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
             		tokens.add(token);            		
         		} 
         		userTokens.put(vi.getNumber(), tokens);
+        		signedTokens.put(vi.getNumber(), new ArrayList<>());
         		vi.receiveTokens(tokens);
 
             } catch (RemoteException e) {
@@ -249,7 +267,8 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     	}
     	for(VisitorInterface vi : visitors) {
     		List<byte[]> tokens = new ArrayList<>();
-    		for(int i=0;i<48;i++) {
+    		userTokens.get(vi.getNumber()).clear();
+    		for(int i=0;i<24;i++) {
     			byte[] token = generateToken();
         		tokens.add(token);
         		userTokens.get(vi.getNumber()).add(token);
@@ -306,23 +325,11 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
         return new String(result); 
     }
     public static byte[] generateToken() {
-    	byte[] token = new byte[16]; 
+    	byte[] token = new byte[64]; 
         SecureRandom secureRandom = new SecureRandom(); 
         secureRandom.nextBytes(token); 
         return token; 
     }
-
-	@Override
-	public void informCathering(String datetime, String CF) throws RemoteException{
-		for(CatheringInterface ci : catherings) {
-			if(ci.getBusinnessNumber().equals(CF)) {
-				String s = "There was an infected visitor in your business [" + datetime + "]";
-				//ci.receiveMessage(s);
-			}
-		}
-    	
-		
-	}
 
 	@Override
 	public byte[] getPseudonym(String CF, String date) throws RemoteException {
@@ -338,7 +345,7 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 		String plaintext = ci.getBusinnessNumber() + ";" + date;
     	try {
         	cipherText = do_AESEncryption(plaintext, s);
-        	System.out.println("controle key: " + DatatypeConverter.printHexBinary(cipherText));
+        	//System.out.println("controle key: " + DatatypeConverter.printHexBinary(cipherText));
     	}catch(Exception e) {
     		e.printStackTrace();
     	}    	
@@ -349,7 +356,7 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 			String strToHash = ci.getLocation() + ";" + date;
 			md.update(cipherText); //cipherText is used as salt
 			nym = md.digest(strToHash.getBytes(StandardCharsets.UTF_8));
-			System.out.println("Nym control: " + DatatypeConverter.printHexBinary(nym));
+			//System.out.println("Nym controle: " + DatatypeConverter.printHexBinary(nym));
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
@@ -371,6 +378,111 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 	@Override
 	public LocalDate getDate() throws RemoteException {
 		return lDate;
+	}
+	public static KeyPair generateRSAKkeyPair() throws Exception{
+        SecureRandom secureRandom = new SecureRandom();
+ 
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+ 
+        keyPairGenerator.initialize(512, secureRandom);
+ 
+        return keyPairGenerator.generateKeyPair();
+	}
+	public byte[] signToken(byte[] input) throws Exception{
+    	Signature signature = Signature.getInstance("SHA256withRSA");
+    	signature.initSign(sk);
+    	signature.update(input);
+    	return signature.sign();
+    }
+
+	@Override
+	public PublicKey getPublicKey() throws RemoteException {
+		return pk;
+	}
+	@Override
+	public void flush() throws RemoteException{
+		for(VisitorInterface vi : visitors) {
+			vi.didntExitCathering();
+		}
+	}
+	@Override
+	public boolean checkToken(byte[] visitorToken, byte[] signature, PublicKey key) throws RemoteException {
+		boolean foundToken = false;
+		String mapKey = null;
+		System.out.println("mapSize: " + userTokens.size());
+		for(String phoneNumber : userTokens.keySet()) {
+			System.out.println(phoneNumber + " size: " + userTokens.get(phoneNumber).size());
+			for(byte[] token : userTokens.get(phoneNumber)) {
+				if(Arrays.equals(token, visitorToken)) {
+					foundToken = true;
+					mapKey = phoneNumber;
+					break;
+				}
+			}
+			if(foundToken) {
+				break;
+			}
+		}
+		if(!foundToken) {
+			System.out.println("visitorToken niet gevonden");
+			return false;
+		}else {
+			try {
+				if(Verify_Digital_Signature(visitorToken, signature, key)){
+					userTokens.get(mapKey).remove(visitorToken); //Origineel token wordt verwjderd
+					if(signedTokens.containsKey(mapKey)) { //Nieuwe entry aanmaken
+						List<byte[]> signingTokens = new ArrayList<>();
+						signingTokens.add(signature);
+						signedTokens.put(mapKey, signingTokens);
+						return true;
+					}else {
+						signedTokens.get(mapKey).add(signature); //signedToken toevoegen aan bestaande lijst
+						return true;
+					}
+				}else {
+					System.out.println("Signed visitorToken komt niet overeen");
+					return false;
+				}
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			}
+		}
+		
+	}
+	public static boolean Verify_Digital_Signature(byte[] input, byte[] signatureToVerify, PublicKey key)throws Exception 
+    { 
+        Signature signature = Signature.getInstance("SHA256withRSA"); 
+        signature.initVerify(key); 
+        signature.update(input); 
+        return signature.verify(signatureToVerify); 
+    }
+
+	@Override
+	public void warnVisitor(byte[] visitorToken, String date, String phone) throws RemoteException {
+		for(String number : signedTokens.keySet()) {
+			for(byte[] signedToken : signedTokens.get(number)) {
+				if(Arrays.equals(visitorToken, signedToken)) {
+					for(VisitorInterface vi : visitors) {
+						if(vi.getNumber().equals(number) && !vi.getNumber().equals(phone)) {
+							vi.receiveMessage("You came close to an infected person [" + date + "]");
+						}
+					}
+				}
+			}
+		}
+		
+	}
+
+	@Override
+	public void warnCathering(String date, int hour, String CF) throws RemoteException {
+		for(CatheringInterface ci : catherings) {
+			if(CF.equals(ci.getBusinnessNumber())) {
+				ci.receiveMessage("There was an infected person in your business [" + date + ":" + hour + "h]" );
+			}
+		}
+		
 	}
 
 }

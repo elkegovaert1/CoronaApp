@@ -38,7 +38,7 @@ public class Cathering extends UnicastRemoteObject implements CatheringInterface
     @Override
     public void generateDailyQRCode() throws RemoteException {
     	try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            MessageDigest md = MessageDigest.getInstance("SHA-512");
             byte[] R = getSalt();
             md.update(R);//Salt represent R
             byte[] hash = md.digest(nym);//Represents H(Ri, nym), has to be used for signature
@@ -89,6 +89,12 @@ public class Cathering extends UnicastRemoteObject implements CatheringInterface
         random.nextBytes(salt); //R
         return salt;
     }
+
+	@Override
+	public void receiveMessage(String s) throws RemoteException {
+		System.out.println(s);
+		
+	}
 
 
 }

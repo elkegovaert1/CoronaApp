@@ -37,7 +37,7 @@ public class Inspector implements InspectorInterface {
 		}
 		String dailyQRCode = null;
 		try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            MessageDigest md = MessageDigest.getInstance("SHA-512");
             md.update(DatatypeConverter.parseHexBinary(R));//Salt represent R
             byte[] hashcode = md.digest(nym);//Represents H(Ri, nym), has to be used for signature
             dailyQRCode = R + ";" + CF + ";" + 

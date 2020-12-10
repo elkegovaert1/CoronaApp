@@ -15,4 +15,5 @@ public interface CatheringInterface extends Remote {
     StringProperty getDailyQRCode() throws RemoteException;
     String getLocation() throws RemoteException;
     void receivePseudonym(byte[] nym) throws RemoteException;
+    void receiveMessage(String s) throws RemoteException;
 }

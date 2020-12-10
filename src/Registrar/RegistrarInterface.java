@@ -5,6 +5,7 @@ import Visitor.VisitorInterface;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.security.PublicKey;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -30,11 +31,18 @@ public interface RegistrarInterface extends Remote {
 
     VisitorInterface getVisitor(String number) throws RemoteException;
     
-    void informCathering(String datetime, String CF) throws RemoteException;
-    
     //function used for inspector
     byte[] getPseudonym(String CF, String date) throws RemoteException;
     
     LocalDate getDate() throws RemoteException;
+    
+    PublicKey getPublicKey() throws RemoteException;
+    
+    boolean checkToken(byte[] visitorToken, byte[] signature, PublicKey key) throws RemoteException;
+    
+    void flush() throws RemoteException;
+    
+    void warnVisitor(byte[] visitorToken, String date, String phone) throws RemoteException;
+    void warnCathering(String date, int hour, String CF) throws RemoteException;
 
 }
