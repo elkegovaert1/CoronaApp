@@ -3,17 +3,9 @@ package Doctor;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.ArrayList;
-import java.util.List;
 
-import Cathering.Cathering;
-import Cathering.CatheringInterface;
-import Inspector.Inspector;
 import MatchingService.MatchingInterface;
-import Registrar.RegistrarInterface;
 import javafx.application.Application;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -34,7 +26,7 @@ public class DoctorScreen extends Application {
     }
     @Override
     public void start(Stage primaryStage) {
-        primaryStage.setTitle("Inspector");
+        primaryStage.setTitle("Doctor");
         primaryStage.setScene(makeInitScene(primaryStage));
         primaryStage.show();
     }
@@ -49,7 +41,7 @@ public class DoctorScreen extends Application {
         	//System.setProperty("java.rmi.server.hostname","127.0.0.1");
             Registry myRegistry = LocateRegistry.getRegistry("localhost", 1101);
             matchingService =  (MatchingInterface) myRegistry.lookup("MatchingService");
-            doctor = new Doctor(matchingService);
+            doctor = new Doctor();
         }catch(Exception e) {
         	e.printStackTrace();
         }
@@ -64,6 +56,7 @@ public class DoctorScreen extends Application {
         		primaryStage.setScene(makeTestScene(primaryStage, qrField.getText()));
 
         });
+
         rootPane.add(qrField, 0, 1);
         rootPane.add(qrLabel, 0, 0);
         rootPane.add(submitCatheringInfoButton, 1, 1);
@@ -92,13 +85,8 @@ public class DoctorScreen extends Application {
             	if(rb1.isSelected()) {
             		try {
             			byte[] signature;
-						try {
-							signature = doctor.signCode(QRCode.getBytes());
-							matchingService.receivePosVisitor(QRCode, signature, doctor.getPublicKey());
-						} catch (Exception e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
+                        signature = doctor.signCode(QRCode.getBytes());
+                        matchingService.receivePosVisitor(QRCode, signature, doctor.getPublicKey());
 					}catch(Exception e) {
 						e.printStackTrace();
 					}

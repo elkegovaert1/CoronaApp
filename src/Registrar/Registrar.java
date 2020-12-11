@@ -36,46 +36,17 @@ import javax.xml.bind.DatatypeConverter;
 import Cathering.CatheringInterface;
 
 
-
-/*
-
-The registrar has three major tasks.
-First, it enrolls new catering facilities and provides them with a tool
-to generate QR codes on a daily basis. Second, it enrolls new users
-and provides them with tokens that can be used when visiting a
-catering facility. Third, it reveals contact information of possibly
-infected people. The matching service keeps information about
-visits and supports contact tracing. Note that uniquely identifying
-user and catering facility data are not revealed to the matching
-service
-
-Note that the registrar keeps the mapping between the phone number
-and the tokens that were issued
-
- */
-
 public class Registrar extends UnicastRemoteObject implements RegistrarInterface {
-    /**
-	 * 
-	 */
 	private static final long serialVersionUID = -7945048366389923378L;
-
-	
-	
-
-	private static final int MAX_VISITS_ALLOWED = 3; // moet 48 zijn
 
     private List<VisitorInterface> visitors;
     private List <CatheringInterface> catherings;
 
     public static ObservableList<String> visitorNameNumber;
     public static ObservableList<String> catheringNameNumber;
-    
-    private static byte[] initializationVector;
-    
+
     private static LocalDate lDate = LocalDate.now();
     
-    //private static final String s = "boooooooooom!!!!";
     private static final String salt = "ssshhhhhhhhhhh!!!!";
     
     private String s;
@@ -101,7 +72,6 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 			sk = keypair.getPrivate();
 	        pk = keypair.getPublic();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
         
@@ -111,7 +81,6 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
         }catch(Exception e) {
         	e.printStackTrace();
         }
-        //System.out.println("The Secret Key is :" + s); 
     }
 
     @Override
@@ -177,37 +146,6 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     }
 
     @Override
-    public List<String> getTokens(String number) throws RemoteException {
-        LocalDate today = LocalDate.now();
-
-        LocalDate lastUpdate;
-        if (dateGeneratedTokens.containsKey(number)) {
-            lastUpdate = dateGeneratedTokens.get(number);
-            if (today.isBefore(lastUpdate) || today.isEqual(lastUpdate)) {
-                return null;
-            }
-        }
-
-        dateGeneratedTokens.replace(number, today);
-        List<String> newTokens = new ArrayList<>();
-        Random random = new Random();
-        for (int i = 0; i < MAX_VISITS_ALLOWED; i++) {
-            newTokens.add(String.valueOf(random.nextInt(10000000)));
-        }
-        return newTokens;
-    }
-
-    @Override
-    public VisitorInterface getVisitor(String number) throws RemoteException{
-        for(VisitorInterface visitorInterface : visitors) {
-            if(visitorInterface.getNumber().equals(number)) {
-                return visitorInterface;
-            }
-        }
-        return null;
-    }
-
-    @Override
     public void disconnectVisitor(VisitorInterface vi) throws RemoteException {
         try {
             String info = vi.getName() + "[" +vi.getNumber() + "]";
@@ -235,14 +173,12 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     	String date = DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).format(lDate);
     	System.out.println("Date: " + date);
     	String plainText = businnessNumber + ";" + date;
-    			
-    	
-    // Encrypting the message 
-    // using the symmetric key 
+
+		// Encrypting the message
+		// using the symmetric key
     	byte[] cipherText = null;
     	try {
         	cipherText = do_AESEncryption(plainText, s);  //Represents S(CF,day)
-        	//System.out.println("Key gen: " + DatatypeConverter.printHexBinary(cipherText));
     	}catch(Exception e) {
     		e.printStackTrace();
     	}
@@ -253,12 +189,12 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 			String strToHash = location + ";" + date;
 			md.update(cipherText); //cipherText is used as salt
 			nym = md.digest(strToHash.getBytes(StandardCharsets.UTF_8));
-			//System.out.println("Nym gen: " + DatatypeConverter.printHexBinary(nym));
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
     	return nym;        
     }
+
     public void newDay() throws RemoteException{
     	lDate = lDate.plus(1, ChronoUnit.DAYS);
     	for(CatheringInterface ci : catherings) {
@@ -277,7 +213,7 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
     	}
     	
     }
- // Function to create a secret key 
+ 	// Function to create a secret key
     public void createAESKey() throws Exception { 
   
         // Creating a new instance of 
@@ -303,15 +239,14 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
         SecretKeySpec secretKey = new SecretKeySpec(tmp.getEncoded(), "AES");
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING"); 
         
-        //System.out.println(DatatypeConverter.printHexBinary(secretKey.getEncoded()));
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivspec);   
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivspec);
         return cipher.doFinal(plainText.getBytes()); 
     } 
- // This function performs the 
-    // reverse operation of the 
-    // do_AESEncryption function. 
-    // It converts ciphertext to 
-    // the plaintext using the key. 
+	 // This function performs the
+		// reverse operation of the
+		// do_AESEncryption function.
+		// It converts ciphertext to
+		// the plaintext using the key.
     public static String do_AESDecryption(byte[] cipherText, SecretKey secretKey, 
     		byte[] initializationVector) throws Exception {
     	Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING"); 
@@ -345,7 +280,6 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 		String plaintext = ci.getBusinnessNumber() + ";" + date;
     	try {
         	cipherText = do_AESEncryption(plaintext, s);
-        	//System.out.println("controle key: " + DatatypeConverter.printHexBinary(cipherText));
     	}catch(Exception e) {
     		e.printStackTrace();
     	}    	
@@ -356,15 +290,12 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 			String strToHash = ci.getLocation() + ";" + date;
 			md.update(cipherText); //cipherText is used as salt
 			nym = md.digest(strToHash.getBytes(StandardCharsets.UTF_8));
-			//System.out.println("Nym controle: " + DatatypeConverter.printHexBinary(nym));
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
     	return nym;
 	}
-	public static byte[] createInitializationVector() 
-    { 
-  
+	public static byte[] createInitializationVector() {
         // Used with encryption 
         byte[] initializationVector 
             = new byte[16]; 
@@ -379,6 +310,7 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 	public LocalDate getDate() throws RemoteException {
 		return lDate;
 	}
+
 	public static KeyPair generateRSAKkeyPair() throws Exception{
         SecureRandom secureRandom = new SecureRandom();
  
@@ -388,23 +320,14 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
  
         return keyPairGenerator.generateKeyPair();
 	}
-	public byte[] signToken(byte[] input) throws Exception{
-    	Signature signature = Signature.getInstance("SHA256withRSA");
-    	signature.initSign(sk);
-    	signature.update(input);
-    	return signature.sign();
-    }
 
-	@Override
-	public PublicKey getPublicKey() throws RemoteException {
-		return pk;
-	}
 	@Override
 	public void flush() throws RemoteException{
 		for(VisitorInterface vi : visitors) {
-			vi.didntExitCathering();
+			vi.didNotExitCathering();
 		}
 	}
+
 	@Override
 	public boolean checkToken(byte[] visitorToken, byte[] signature, PublicKey key) throws RemoteException {
 		boolean foundToken = false;
@@ -434,25 +357,23 @@ public class Registrar extends UnicastRemoteObject implements RegistrarInterface
 						List<byte[]> signingTokens = new ArrayList<>();
 						signingTokens.add(signature);
 						signedTokens.put(mapKey, signingTokens);
-						return true;
 					}else {
 						signedTokens.get(mapKey).add(signature); //signedToken toevoegen aan bestaande lijst
-						return true;
 					}
+					return true;
 				}else {
 					System.out.println("Signed visitorToken komt niet overeen");
 					return false;
 				}
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				return false;
 			}
 		}
 		
 	}
-	public static boolean Verify_Digital_Signature(byte[] input, byte[] signatureToVerify, PublicKey key)throws Exception 
-    { 
+
+	public static boolean Verify_Digital_Signature(byte[] input, byte[] signatureToVerify, PublicKey key) throws Exception {
         Signature signature = Signature.getInstance("SHA256withRSA"); 
         signature.initVerify(key); 
         signature.update(input); 

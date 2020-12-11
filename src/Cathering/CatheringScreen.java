@@ -9,7 +9,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
@@ -84,7 +83,7 @@ public class CatheringScreen extends Application {
 
                         /* Change the scene of the primaryStage */
                         primaryStage.close();
-                        primaryStage.setScene(makeChatUI(registrar));
+                        primaryStage.setScene(showInfoCathering());
                         primaryStage.setTitle(cathering.getCatheringName());
                         primaryStage.show();
                     }
@@ -109,19 +108,37 @@ public class CatheringScreen extends Application {
         return new Scene(rootPane, 400, 400);
     }
 
-    public Scene makeChatUI(RegistrarInterface ri) throws RemoteException{
+    public Scene showInfoCathering() throws RemoteException{
         GridPane rootPane = new GridPane();
         rootPane.setPadding(new Insets(20));
-        rootPane.setAlignment(Pos.CENTER);
-        rootPane.setHgap(10);
         rootPane.setVgap(10);
+        rootPane.setHgap(10);
+        rootPane.setAlignment(Pos.CENTER);
 
+        Label name = new Label("Name: ");
+        Label cname = new Label(cathering.getCatheringName());
+        Label number = new Label("Business number: ");
+        Label cnumber = new Label(cathering.getBusinnessNumber());
+        Label location = new Label("Location: ");
+        Label clocation = new Label(cathering.getLocation());
+        Label qrCode = new Label("Daily QRCode in command line!");
+        Button logout = new Button("Logout");
+        logout.setOnAction(Event -> {
+            try {
+                stop();
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        });
 
-        Label QRCode = new Label();
-        //StringProperty sp = cathering.getDailyQRCode();*/
-        QRCode.textProperty().bind(qr);
-
-        rootPane.add(qrCode, 0, 0);
+        rootPane.add(name, 0, 0);
+        rootPane.add(cname,1,0);
+        rootPane.add(number, 0, 1);
+        rootPane.add(cnumber, 1,1);
+        rootPane.add(location, 0, 2);
+        rootPane.add(clocation, 1,2);
+        rootPane.add(qrCode, 0,3);
+        rootPane.add(logout, 0, 4);
 
         return new Scene(rootPane, 600, 400);
 
@@ -133,8 +150,5 @@ public class CatheringScreen extends Application {
             cathering.disconnected();
         }
         System.exit(0);
-    }
-    public static void setQrcode(String qrcode) {    	
-    	qr.setValue(qrcode);
     }
 }

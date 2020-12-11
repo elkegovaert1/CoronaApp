@@ -22,9 +22,7 @@ import javax.xml.bind.DatatypeConverter;
 import Doctor.DoctorInterface;
 
 public class Visitor extends UnicastRemoteObject implements VisitorInterface {
-    /**
-	 * 
-	 */
+
 	private static final long serialVersionUID = -4542222821435686339L;
 	private static final int MAX_VISITS_ALLOWED = 24; // moet 48 zijn
     private String name;
@@ -57,8 +55,9 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
     public void exitCathering() {
     	QRcode = null;
     }
+
     @Override
-    public boolean didntExitCathering() throws RemoteException{
+    public boolean didNotExitCathering() throws RemoteException{
     	if(QRcode == null) {
     		return false;
     	}
@@ -90,7 +89,6 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
 	                    		 + ";;" + hour);
 	                     System.out.println("Log: " + log.get(log.size() - 1));
 					} catch (RemoteException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 						System.out.println("Er ging iets mis met logging");
 					}            	
@@ -105,6 +103,7 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
 
         }
     }
+
     @Override
     public boolean visitCathering(String QRCode) throws RemoteException {
     	this.QRcode = QRCode; //for sending new capsules next hour
@@ -136,7 +135,6 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
 	                    		 + ";;" + hour);
 	                     System.out.println("Log: " + log.get(log.size() - 1));
 					} catch (RemoteException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 						System.out.println("Er ging iets mis met logging");
 					}            	
@@ -151,22 +149,6 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
 
         }
     }
-
-    // opgeroepen als zogezegd elke keer dat scherm geopend wordt
-    /*@Override
-    public void refresh() throws RemoteException {
-        updateTokens();
-    }*/
-
-    // kijken of er nieuwe tokens opgehaald moeten worden
-    /*@Override
-    public void updateTokens() throws RemoteException {
-        List<byte[]> newTokens = registrar.getTokens(userNumber);
-        if (!newTokens.isEmpty()) { // krijgt geen nieuwe tokens als die er al gehad heeft die dag
-            this.tokens = newTokens;
-        }
-        lastUpdateTokens = LocalDate.now();
-    }*/
 
     @Override
     public void disconnected() throws RemoteException {
@@ -186,10 +168,7 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
 	@Override
 	public void receiveTokens(List<byte[]> tokens) throws RemoteException {
 		this.tokens.clear();
-		this.tokens.addAll(tokens);	
-		/*for(byte[] token : this.tokens) {
-			System.out.println(DatatypeConverter.printHexBinary(token));
-		}*/
+		this.tokens.addAll(tokens);
 	}
 
 	@Override
@@ -224,12 +203,7 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
 		String string = str.substring(0, str.length() - 3);
 		System.out.println("QRLogs: " + string);
 	}
-	/*
-	@Override
-	public void updateTokens() throws RemoteException {
-		// TODO Auto-generated method stub
-		
-	}*/
+
 	@Override
 	public void receiveMessage(String s) throws RemoteException {
 		System.out.println(s);

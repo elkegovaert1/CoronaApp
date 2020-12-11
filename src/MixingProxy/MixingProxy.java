@@ -72,9 +72,8 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 			sk = keypair.getPrivate();
 	        pk = keypair.getPublic();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}        
+		}
         matchingService = mi;
         registrar = ri;
         hour = LocalTime.now().getHour();
@@ -87,7 +86,6 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 		try {
 			accepted = Verify_Digital_Signature(newCapsule.getCatheringCode(), signing, pk);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
         	
@@ -109,9 +107,8 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 
     @Override
     public byte[] controlCapsule(Capsule newCapsule, VisitorInterface vi) throws RemoteException {
-        // controle legite capsule
+        // controle capsule
         byte[] code = newCapsule.getCatheringCode();
-        int hourCapsule = newCapsule.getTime();
         byte[] token = newCapsule.getVisitorToken();
         
         boolean isValid = true;
@@ -128,33 +125,16 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 	        	isValid = false;
 	        }  
 		} catch (Exception e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 			isValid = false;
 		}
-        
-             
-       /* the mixing server first checks (a) the
-        validity of the user token, and then verifies that (b) it is a token for
-        that particular day and (c) it has not been spent before*/
-        // a) zit in checkToken bij de registrar
-        // b) zit ook in checkToken bij de registrar (na elke dag worden de niet-signed tokens verwijderd)
-        // c) zit in signCode, elk token kan maar één keer gesigned worden
-        // controle datum
 
-        // als het niet al bevat -> is overbodig denk ik
-        /*for (Capsule c: capsules) {
-            if (c.getVisitorToken().equals(token)) {
-                isValid =  false;
-            }
-        }*/
         if(isValid) {
         	try {
         		System.out.println("Gesigned: " + DatatypeConverter.printHexBinary(
         				signCode(newCapsule.getCatheringCode())));
 				return signCode(newCapsule.getCatheringCode());
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				return null;
 			}

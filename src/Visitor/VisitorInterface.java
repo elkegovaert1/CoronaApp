@@ -14,11 +14,9 @@ public interface VisitorInterface extends Remote {
     
     void receiveTokens(List<byte[]> tokens) throws RemoteException;
 
-    boolean didntExitCathering() throws RemoteException;
+    boolean didNotExitCathering() throws RemoteException;
     boolean visitCathering(String QRCode) throws RemoteException;
 
-    //void updateTokens() throws RemoteException;
-    
     void getLogsFromTwoDays() throws RemoteException;
     
     void receiveMessage(String s) throws RemoteException;

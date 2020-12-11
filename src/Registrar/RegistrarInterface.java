@@ -22,22 +22,17 @@ public interface RegistrarInterface extends Remote {
     void disconnectVisitor(VisitorInterface vi) throws RemoteException;
     void disconnectCathering(CatheringInterface catheringInterface) throws RemoteException;
 
-    List<String> getTokens(String number) throws RemoteException;
 
     boolean checkUserInformation(String number) throws RemoteException;
     boolean checkCatheringInformation(String businessNumber) throws RemoteException;
 
     byte[] generateDailyPseudonym(String businnessNumber, String location) throws RemoteException;
 
-    VisitorInterface getVisitor(String number) throws RemoteException;
-    
     //function used for inspector
     byte[] getPseudonym(String CF, String date) throws RemoteException;
     
     LocalDate getDate() throws RemoteException;
-    
-    PublicKey getPublicKey() throws RemoteException;
-    
+
     boolean checkToken(byte[] visitorToken, byte[] signature, PublicKey key) throws RemoteException;
     
     void flush() throws RemoteException;

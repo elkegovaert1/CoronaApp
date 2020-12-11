@@ -41,7 +41,6 @@ public class InspectorScreen extends Application {
         rootPane.setHgap(10);
         rootPane.setAlignment(Pos.CENTER);
         try {
-        	//System.setProperty("java.rmi.server.hostname","127.0.0.1");
             Registry myRegistry = LocateRegistry.getRegistry("localhost", 1099);
             registrar =  (RegistrarInterface) myRegistry.lookup("Registrar");
             inspector = new Inspector(registrar);
@@ -63,10 +62,8 @@ public class InspectorScreen extends Application {
 						errorLabel.setText("QRCode is correct");
 					}else {
 						errorLabel.setText("Invalid QRCode");
-						
 					}
 				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 

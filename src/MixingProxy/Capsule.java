@@ -32,9 +32,6 @@ public class Capsule implements Serializable{
 	public byte[] getCatheringCode() {
 		return catheringCode;
 	}
-	public void setCatheringCode(byte[] catheringCode) {
-		this.catheringCode = catheringCode;
-	}
 	@Override
 	public String toString() {
 		return (this.timeHour + " " + DatatypeConverter.printHexBinary(visitorToken));

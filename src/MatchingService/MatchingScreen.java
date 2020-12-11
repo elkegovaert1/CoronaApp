@@ -1,7 +1,5 @@
 package MatchingService;
 
-// show content of database
-
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -51,7 +49,6 @@ public class MatchingScreen extends Application {
 			createRegistry.rebind("MatchingService", matchingService);
 	        System.out.println("[System] Matching Service is ready.");
 		} catch (NotBoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}       
         

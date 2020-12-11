@@ -16,12 +16,9 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
-import Doctor.DoctorInterface;
-
 public class VisitorScreen extends Application {
     public RegistrarInterface registrar;
     public MixingProxyInterface mixingProxy;
-    public DoctorInterface doctor;
     public Visitor visitor;
 
     public static void main(String[] args) throws RemoteException {
@@ -58,9 +55,6 @@ public class VisitorScreen extends Application {
                 registrar =  (RegistrarInterface) registryRegistrar.lookup("Registrar");
                 Registry registryMixingProxy = LocateRegistry.getRegistry("localhost", 1100);
                 mixingProxy = (MixingProxyInterface) registryMixingProxy.lookup("MixingProxy");
-                /*Registry registryDoctor = LocateRegistry.getRegistry("localhost", 1102);
-                doctor = (DoctorInterface) registryDoctor.lookup("Doctor");*/
-                
 
                 System.out.println("[System] Visitor App is running");
 
@@ -113,13 +107,13 @@ public class VisitorScreen extends Application {
         rootPane.setHgap(10);
         rootPane.setVgap(10);
 
+        Label infected = new Label("See command line for notifications if you're infected!");
         Button visitCathering = new Button("Visit");
         Button generateLog = new Button("QR-Logs");
         generateLog.setOnAction(Event -> {
         	try {
 				visitor.getLogsFromTwoDays();
 			} catch (RemoteException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
         });

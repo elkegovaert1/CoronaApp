@@ -36,7 +36,6 @@ public class RegistrarScreen extends Application {
         rootPane.setVgap(10);
         rootPane.setHgap(10);
 
-        //System.setProperty("java.rmi.server.hostname","127.0.0.1");
         Registry registry = LocateRegistry.createRegistry(1099);
         Registrar registrar = new Registrar();
         registry.rebind("Registrar", registrar);
