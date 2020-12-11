@@ -3,15 +3,22 @@ package Visitor;
 import MixingProxy.MixingProxyInterface;
 import Registrar.RegistrarInterface;
 import javafx.application.Application;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -20,6 +27,7 @@ public class VisitorScreen extends Application {
     public RegistrarInterface registrar;
     public MixingProxyInterface mixingProxy;
     public Visitor visitor;
+    public Image image;
 
     public static void main(String[] args) throws RemoteException {
         launch();
@@ -126,7 +134,8 @@ public class VisitorScreen extends Application {
         });
 
         rootPane.add(visitCathering, 0, 0);
-        rootPane.add(generateLog, 1, 0);
+        rootPane.add(generateLog, 0, 1);
+        rootPane.add(infected, 0,2);
 
         return new Scene(rootPane, 600, 400);
 
@@ -146,8 +155,8 @@ public class VisitorScreen extends Application {
         visitCathering.setOnAction(Event -> {
             boolean visited = false;
             try {
-                visited = visitor.visitCathering(qrcode.getText());
-            } catch (RemoteException e) {
+                visited = visitor.visitCathering(qrcode.getText(),this);
+            } catch (IOException e) {
                 e.printStackTrace();
             }
             if (!visited) {
@@ -175,8 +184,11 @@ public class VisitorScreen extends Application {
         rootPane.setHgap(10);
         rootPane.setVgap(10);
 
-        Label allowed = new Label ("visit allowed!");
+        Label allowed = new Label ("Visit allowed! Unique Token: ");
         Button leaveCathering = new Button("Leave cathering facility");
+        ImageView iv = new ImageView(new Image(new File("image/image.jpg").toURI().toString()));
+        iv.setFitHeight(100);
+        iv.setFitWidth(100);
 
         leaveCathering.setOnAction(Event -> {
             visitAllowed.close();
@@ -191,7 +203,8 @@ public class VisitorScreen extends Application {
         });
 
         rootPane.add(allowed, 0, 0);
-        rootPane.add(leaveCathering,0,1);
+        rootPane.add(iv,0,1);
+        rootPane.add(leaveCathering, 0,2);
 
         return new Scene(rootPane, 600, 400);
     }

@@ -9,7 +9,7 @@ import java.security.PublicKey;
 
 public interface MixingProxyInterface extends Remote {
 
-    boolean addCapsule(Capsule capsule, VisitorInterface vi) throws RemoteException;
+    byte[] addCapsule(Capsule capsule, VisitorInterface vi) throws RemoteException;
 
     byte[] controlCapsule(Capsule newCapsule, VisitorInterface vi) throws RemoteException;
 

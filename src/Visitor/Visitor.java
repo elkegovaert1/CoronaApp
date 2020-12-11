@@ -5,11 +5,14 @@ import MixingProxy.MixingProxyInterface;
 import Registrar.RegistrarInterface;
 import javafx.application.Platform;
 
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.PublicKey;
 import java.time.LocalDate;
-import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
@@ -17,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
+import javax.imageio.ImageIO;
 import javax.xml.bind.DatatypeConverter;
 
 import Doctor.DoctorInterface;
@@ -76,23 +80,25 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
             Capsule capsule = new Capsule(mixingProxy.getHour(), token, HRnym);
 
             // naar de mixing proxy sturen (unieke code + vandaag + token)
-            boolean accepted = mixingProxy.addCapsule(capsule, (VisitorInterface) this);
+            byte[] accepted = mixingProxy.addCapsule(capsule, (VisitorInterface) this);
 
             // opslaan in log
-            if (accepted) {
+            if (accepted != null) {
             	 Platform.runLater(() -> {
             		 LocalDate lDate;
-					try {
-						lDate = registrar.getDate();
-						int hour = mixingProxy.getHour();
-	                     log.add(QRcode + ";;" + DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).format(lDate)
-	                    		 + ";;" + hour);
-	                     System.out.println("Log: " + log.get(log.size() - 1));
-					} catch (RemoteException e) {
-						e.printStackTrace();
-						System.out.println("Er ging iets mis met logging");
-					}            	
+                     try {
+                         lDate = registrar.getDate();
+                         int hour = mixingProxy.getHour();
+                         log.add(QRcode + ";;" + DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).format(lDate)
+                                 + ";;" + hour);
+                         System.out.println("Log: " + log.get(log.size() - 1));
+
+                     } catch (RemoteException e) {
+                         e.printStackTrace();
+                         System.out.println("Er ging iets mis met logging");
+                     }
                      visits++;
+
             	 });
             	
                 return true;
@@ -105,7 +111,7 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
     }
 
     @Override
-    public boolean visitCathering(String QRCode) throws RemoteException {
+    public boolean visitCathering(String QRCode, VisitorScreen vs) throws IOException {
     	this.QRcode = QRCode; //for sending new capsules next hour
         // als aan max aantal visits || mogen tokens van gisteren niet gebruiken
         LocalDate now = registrar.getDate();
@@ -122,10 +128,12 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
             Capsule capsule = new Capsule(mixingProxy.getHour(), token, HRnym);
 
             // naar de mixing proxy sturen (unieke code + vandaag + token)
-            boolean accepted = mixingProxy.addCapsule(capsule, (VisitorInterface) this);
+            byte[] accepted = mixingProxy.addCapsule(capsule, (VisitorInterface) this);
+
+            createImage(accepted);
 
             // opslaan in log
-            if (accepted) {
+            if (accepted != null) {
             	 Platform.runLater(() -> {
             		 LocalDate lDate;
 					try {
@@ -133,12 +141,18 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
 						int hour = mixingProxy.getHour();
 	                    log.add(QRCode + ";;" + DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).format(lDate)
 	                    		 + ";;" + hour);
-	                     System.out.println("Log: " + log.get(log.size() - 1));
+                        System.out.println("Log: " + log.get(log.size() - 1));
+
 					} catch (RemoteException e) {
 						e.printStackTrace();
 						System.out.println("Er ging iets mis met logging");
-					}            	
+					} catch (IOException e) {
+                        e.printStackTrace();
+                    }
                      visits++;
+
+                     System.out.println(DatatypeConverter.printHexBinary(accepted));
+
             	 });
             	
                 return true;
@@ -148,6 +162,49 @@ public class Visitor extends UnicastRemoteObject implements VisitorInterface {
             }
 
         }
+    }
+
+    @Override
+    public void createImage(byte[] accepted) throws IOException {
+        String signed = DatatypeConverter.printHexBinary(accepted);
+        String[] signedArray = signed.split("");
+
+        int height=3;
+        int width=3;
+
+        int ints = 0;
+        int[] intList = new int[height*width*3];
+        for (String s: signedArray) {
+            if (ints >= height*width*3) {
+                break;
+            }
+            if (Character.isDigit(s.charAt(0))) {
+                intList[ints] = Integer.parseInt(s);
+                ints++;
+            }
+        }
+
+        BufferedImage image = new BufferedImage(width*100, height*100, BufferedImage.TYPE_INT_RGB);
+        int current = 0;
+        int red,green,blue;
+        for (int y = 0; y < height*100; y++) {
+            for (int x = 0; x < width*100; x++) {
+                red = intList[current++]*25;
+                green = intList[current++]*25;
+                blue = intList[current++]*25;
+                int rgb = new Color(red,green,blue).getRGB();
+                for (int i1 = 0; i1 < 100; i1++) {
+                    for (int i2=0; i2 < 100; i2++) {
+                        image.setRGB(x+i1,y+i2,rgb);
+                    }
+                }
+                x=x+99;
+            }
+            y=y+99;
+        }
+
+        File outputfile = new File("image/image.jpg");
+        ImageIO.write(image, "jpg", outputfile);
     }
 
     @Override

@@ -80,7 +80,7 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
     }
     
     @Override
-    public boolean addCapsule(Capsule newCapsule, VisitorInterface vi) throws RemoteException {
+    public byte[] addCapsule(Capsule newCapsule, VisitorInterface vi) throws RemoteException {
         byte[] signing = controlCapsule(newCapsule, vi);
         boolean accepted = false;
 		try {
@@ -98,9 +98,9 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
             		DatatypeConverter.printHexBinary(newCapsule.getVisitorToken()) + ", " + 
             		DatatypeConverter.printHexBinary(newCapsule.getCatheringCode()));
             });
-            return true;
+            return signing;
         } else {
-            return false;
+            return null;
         }
 
     }
@@ -175,8 +175,7 @@ public class MixingProxy extends UnicastRemoteObject implements MixingProxyInter
 	public PublicKey getPublicKey() throws RemoteException {
 		return pk;
 	}
-	public static boolean Verify_Digital_Signature(byte[] input, byte[] signatureToVerify, PublicKey key)throws Exception 
-    { 
+	public static boolean Verify_Digital_Signature(byte[] input, byte[] signatureToVerify, PublicKey key)throws Exception {
         Signature signature = Signature.getInstance("SHA256withRSA"); 
         signature.initVerify(key); 
         signature.update(input); 
