@@ -49,7 +49,7 @@ public class CatheringScreen extends Application {
         TextField locationField = new TextField();
 
         Label nameLabel = new Label("Name");
-        Label numberLabel = new Label("Businness Number");
+        Label numberLabel = new Label("Business Number");
         Label locationLabel = new Label("Location");
         Label errorLabel = new Label();
 
@@ -70,7 +70,7 @@ public class CatheringScreen extends Application {
                     errorLabel.setText("Please fill in all fields.");
 
                 } else if (!registrar.checkCatheringInformation(businessNumber)) {
-                    errorLabel.setText("Businness number already in use");
+                    errorLabel.setText("Business number already in use");
 
                 } else {
                     cathering = new Cathering(cathname, businessNumber, location, registrar);
