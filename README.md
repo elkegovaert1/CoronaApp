@@ -6,10 +6,10 @@ In this order:
 3. Run the MixingProxyScreen to start the Mixing Proxy
 
 Then (no order):
-- Run VisitorScreen to create Visitors accounts
+- Run VisitorScreen to create Visitor accounts
 - Run CatheringScreen to create Cathering accounts
-- Run Doctor to create Doctor
-- Run Inspector to create Inspector
+- Run DoctorScreen to create a Doctor
+- Run InspectorScreen to create an Inspector
 
 <h3>Information about the Corona app </h3>
 
